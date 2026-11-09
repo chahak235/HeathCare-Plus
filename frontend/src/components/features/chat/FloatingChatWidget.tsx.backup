@@ -1,0 +1,456 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  MessageSquare, 
+  X, 
+  Mic, 
+  MicOff, 
+  Volume2, 
+  VolumeX,
+  Send,
+  Shield,
+  AlertTriangle,
+  User,
+  Bot,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  LogIn,
+  User as UserIcon
+} from 'lucide-react';
+import { Button } from '../../ui/Button';
+import { MedicalDisclaimer } from '../../shared/MedicalDisclaimer';
+import { useAuth } from '../../../contexts/AuthContext'; // Add this import
+import { ollamaService } from '../../../services/ollama-service'; // Add this
+
+interface ChatMessage {
+  id: string;
+  content: string;
+  sender: 'user' | 'assistant' | 'system';
+  timestamp: Date;
+  type: 'text' | 'voice';
+  isSaved?: boolean;
+}
+
+const FloatingChatWidget: React.FC = () => {
+  const { isAuthenticated, user, login, logout } = useAuth(); // Get auth state
+  const [isOpen, setIsOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      content: 'Hello! I\'m your AI Healthcare Assistant. How can I help you today?',
+      sender: 'assistant',
+      timestamp: new Date(),
+      type: 'text'
+    }
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recog = new SpeechRecognition();
+      recog.lang = 'en-IN';
+      recog.interimResults = false;
+      recog.maxAlternatives = 1;
+      setRecognition(recog);
+    }
+  }, []);
+
+  // Load messages based on auth state
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Load saved chat history for logged-in user
+      const savedChats = localStorage.getItem(`chat_history_${user.id}`);
+      if (savedChats) {
+        const parsedChats = JSON.parse(savedChats);
+        setMessages(parsedChats.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+          isSaved: true
+        })));
+      }
+    } else {
+      // Guest mode - load temporary session
+      const sessionChats = localStorage.getItem('guest_chat_session');
+      if (sessionChats) {
+        const parsedChats = JSON.parse(sessionChats);
+        setMessages(parsedChats.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+          isSaved: false
+        })));
+      }
+    }
+  }, [isAuthenticated, user]);
+
+  // Save messages based on auth state
+  const saveMessages = (updatedMessages: ChatMessage[]) => {
+    if (isAuthenticated && user) {
+      // Save to user-specific storage
+      localStorage.setItem(`chat_history_${user.id}`, JSON.stringify(updatedMessages));
+      
+      // Also save to server/database (you can implement this later)
+      console.log('Saving to user history:', user.id);
+    } else {
+      // Save to session storage (cleared on browser close)
+      localStorage.setItem('guest_chat_session', JSON.stringify(updatedMessages));
+    }
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputText.trim(),
+      sender: 'user',
+      timestamp: new Date(),
+      type: 'text',
+      isSaved: isAuthenticated // Only saved if authenticated
+    };
+
+    // Add user message
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    saveMessages(updatedMessages);
+    setInputText('');
+
+    // Add loading message
+    const loadingMessage: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      content: '',
+      sender: 'assistant',
+      timestamp: new Date(),
+      type: 'text',
+      isSaved: isAuthenticated
+    };
+
+    const messagesWithLoading = [...updatedMessages, loadingMessage];
+    setMessages(messagesWithLoading);
+    setIsLoading(true);
+
+    try {
+      // Get AI response with user context if logged in
+      let enhancedPrompt = inputText.trim();
+      if (isAuthenticated && user) {
+        // Add user context for personalized responses
+        enhancedPrompt = `User Profile: ${user.name || 'User'}. ${user.medicalHistory ? 'Medical history available.' : ''}
+        
+        User Question: ${inputText.trim()}
+        
+        Please provide personalized advice considering this is a returning user.`;
+      }
+
+      const aiResponse = await ollamaService.generate(enhancedPrompt, true);
+      
+      // Replace loading with AI response
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 2).toString(),
+        content: aiResponse,
+        sender: 'assistant',
+        timestamp: new Date(),
+        type: 'text',
+        isSaved: isAuthenticated
+      };
+
+      const finalMessages = updatedMessages.concat(aiMessage);
+      setMessages(finalMessages);
+      saveMessages(finalMessages);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 2).toString(),
+        content: 'Sorry, I encountered an error. Please try again.',
+        sender: 'assistant',
+        timestamp: new Date(),
+        type: 'text',
+        isSaved: isAuthenticated
+      };
+
+      const errorMessages = updatedMessages.concat(errorMessage);
+      setMessages(errorMessages);
+      saveMessages(errorMessages);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVoiceInput = () => {
+    if (!recognition) {
+      alert('Voice recognition not supported in your browser.');
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    setIsRecording(true);
+    recognition.start();
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInputText(transcript);
+      setIsRecording(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      setIsRecording(false);
+    };
+  };
+
+  const handleClearChat = () => {
+    if (window.confirm('Clear chat history?')) {
+      const defaultMessage: ChatMessage = {
+        id: '1',
+        content: 'Hello! I\'m your AI Healthcare Assistant. How can I help you today?',
+        sender: 'assistant',
+        timestamp: new Date(),
+        type: 'text',
+        isSaved: isAuthenticated
+      };
+      
+      setMessages([defaultMessage]);
+      
+      if (isAuthenticated && user) {
+        localStorage.removeItem(`chat_history_${user.id}`);
+      } else {
+        localStorage.removeItem('guest_chat_session');
+      }
+    }
+  };
+
+  const handleLoginPrompt = () => {
+    if (window.confirm('Login to save your chat history and get personalized health advice. Go to login page?')) {
+      window.location.href = '/login';
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      {/* Chat Toggle Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-2xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105"
+          aria-label="Open chat"
+        >
+          <MessageSquare className="w-8 h-8" />
+          {!isAuthenticated && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full animate-pulse"></div>
+          )}
+        </button>
+      )}
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div className="w-96 h-[600px] bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl flex flex-col border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+          {/* Header */}
+          <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold">Healthcare AI Assistant</h3>
+                <div className="flex items-center gap-2 text-sm opacity-90">
+                  {isAuthenticated ? (
+                    <>
+                      <UserIcon className="w-3 h-3" />
+                      <span>{user?.name || 'User'}</span>
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-xs">History Saved</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                      <span className="text-xs">Guest Mode</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Close chat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Auth Status Banner */}
+          {!isAuthenticated && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/30 p-3 flex items-center justify-between border-b border-yellow-200 dark:border-yellow-800">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Chat history not saved
+                </span>
+              </div>
+              <button
+                onClick={handleLoginPrompt}
+                className="flex items-center gap-1 px-3 py-1 bg-yellow-600 text-white text-sm rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                <LogIn className="w-3 h-3" />
+                Login
+              </button>
+            </div>
+          )}
+
+          {/* Messages Container */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl p-3 ${
+                    message.sender === 'user'
+                      ? 'bg-blue-500 text-white rounded-br-none'
+                      : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-bl-none'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {message.sender === 'assistant' ? (
+                      <Bot className="w-3 h-3" />
+                    ) : (
+                      <User className="w-3 h-3" />
+                    )}
+                    <span className="text-xs opacity-75">
+                      {message.sender === 'assistant' ? 'AI Assistant' : 'You'}
+                    </span>
+                    <span className="text-xs opacity-50">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-sm">{message.content}</p>
+                  {message.sender === 'assistant' && !isAuthenticated && (
+                    <div className="mt-2 pt-2 border-t border-white/20">
+                      <p className="text-xs opacity-75 italic">
+                        💡 Login to save this advice to your health profile
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-neutral-100 dark:bg-neutral-700 rounded-2xl rounded-bl-none p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                    <span className="text-sm">Thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div className="border-t border-neutral-200 dark:border-neutral-700 p-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Type your health question..."
+                className="flex-1 bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              />
+              <button
+                onClick={handleVoiceInput}
+                className={`p-2 rounded-lg ${
+                  isRecording
+                    ? 'bg-red-500 text-white'
+                    : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-700 dark:text-neutral-300'
+                }`}
+                disabled={isLoading}
+                title={isRecording ? 'Stop recording' : 'Voice input'}
+              >
+                {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputText.trim() || isLoading}
+                className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Send message"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Quick Suggestions */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => setInputText('I have headache, what should I do?')}
+                className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50"
+              >
+                Headache?
+              </button>
+              <button
+                onClick={() => setInputText('Best diet for diabetes?')}
+                className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full hover:bg-green-200 dark:hover:bg-green-900/50"
+              >
+                Diabetes Diet
+              </button>
+              <button
+                onClick={handleClearChat}
+                className="px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full hover:bg-red-200 dark:hover:bg-red-900/50"
+              >
+                Clear Chat
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-neutral-200 dark:border-neutral-700 p-3 bg-neutral-50 dark:bg-neutral-900/50">
+            <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+              <div className="flex items-center gap-2">
+                <Shield className="w-3 h-3" />
+                <span>100% Private</span>
+              </div>
+              <div>
+                {isAuthenticated ? (
+                  <span className="text-green-600 dark:text-green-400">✓ History Saved</span>
+                ) : (
+                  <span className="text-yellow-600 dark:text-yellow-400">Guest Mode</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FloatingChatWidget;
