@@ -24,6 +24,7 @@ cd frontend && npm run dev          # http://localhost:3000
 | Skin model | Coming later from your friend. The analyzer shows it as "coming soon" |
 | Emergency | Free: tap-to-call plus email/SMS links. No Twilio |
 | Voice analyzer | Speech transcript, voice features and AI report. Labelled as a wellbeing screening, not a diagnosis |
+| Database | Neon free hosted PostgreSQL (Singapore). Connection string in `backend/.env` as `DATABASE_URL` (not in git). Same string goes into Render later |
 
 ## Status
 
@@ -36,11 +37,12 @@ cd frontend && npm run dev          # http://localhost:3000
 | 4 | Voice mental health analyzer (record or upload, report), matched to the site theme | Done. Browser measures pace, pauses, pitch, loudness (`voice-features.ts`, checked with a test tone). Backend transcribes with Groq Whisper and writes the report (`backend/src/routes/voice.routes.ts`). Crisis wording shows Tele-MANAS 14416. Needs `GROQ_API_KEY`. Hume AI removed |
 | 5 | Worldwide hospital map: search any state or city, all hospitals, contacts, Google Maps directions | Done. Free OpenStreetMap search (`frontend/src/services/hospital-finder.ts`, page `MapPrediction.tsx`). Tested: 791 hospitals in Pune. Limits: free servers can take 20 to 60 s; only about 4% of hospitals have a phone number in OpenStreetMap (Google Maps link shows the rest). Fake hospitals removed. Later: cache results on the backend to make it faster |
 | 6 | Emergency: patient profile (contacts, height, weight, conditions), emergency button calls hospital and family | Done, not tested with a logged-in user (needs the database). New `/emergency` page: Call 112, SOS finds nearest hospital, call and text buttons for nearest hospital, usual hospital and family, automatic email to family with location and health details. Health profile form on `/profile` (patients are sent there after sign-up). Backend `backend/src/routes/emergency.routes.ts` (login required). Navbar emergency link fixed (was a broken `tel:911`) |
+| 8 | Connect Neon database | Done. Backend connects to Neon, created the tables and added 15 doctors plus hospitals and beds. Checked: `/api/doctors` returns 15, the availability calendar works, the booking window shows the doctor calendar |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
 ## Next steps (in order)
 
-1. **Create `backend/.env`** from `backend/.env.example`. Fill in the PostgreSQL password (Postgres 18 is installed on this PC), `JWT_SECRET` and `GROQ_API_KEY`. Restart the backend; it creates the tables and seeds 15 doctors.
+1. **Add `GROQ_API_KEY`** to `backend/.env` (database and `JWT_SECRET` are already set; the database is Neon).
 2. **Test end to end**: sign up as a patient, fill the health profile, book an online and an offline appointment, try SOS, try the voice analyzer, and try a real chest X-ray.
 3. **Email**: add `SMTP_USER` / `SMTP_PASS` (Gmail App Password) so confirmations reach real inboxes.
 4. **Google Meet and Calendar**: create the Google OAuth client, then run `npm run google-auth` in `backend`.
@@ -58,7 +60,6 @@ To add the skin model later: convert it to ONNX the same way, put it in `fronten
 - `GROQ_API_KEY` for chat, voice report and image AI
 - Google Cloud OAuth client (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`) for Meet and Calendar
 - Email account for sending mail (`SMTP_USER`, `SMTP_PASS`, for example a Gmail app password)
-- PostgreSQL password in `backend/.env`
 - Skin condition model from your friend
 - GitHub repo URL when you want to push
 
