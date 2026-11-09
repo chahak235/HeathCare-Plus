@@ -29,6 +29,26 @@ export class Patient {
   @Column({ name: 'emergency_contact', type: 'jsonb', nullable: true })
   emergencyContact: any;
 
+  @Column({ length: 20, nullable: true })
+  gender: string;
+
+  @Column({ name: 'height_cm', type: 'real', nullable: true })
+  heightCm: number;
+
+  @Column({ name: 'weight_kg', type: 'real', nullable: true })
+  weightKg: number;
+
+  /** Family / emergency contacts: [{ name, relation, phone, email }] */
+  @Column({ name: 'emergency_contacts', type: 'jsonb', nullable: true })
+  emergencyContacts: { name: string; relation?: string; phone: string; email?: string }[];
+
+  /** The hospital the patient usually visits: { name, phone, address, lat, lng } */
+  @Column({ name: 'preferred_hospital', type: 'jsonb', nullable: true })
+  preferredHospital: { name: string; phone?: string; address?: string; lat?: number; lng?: number } | null;
+
+  @Column({ name: 'medical_notes', type: 'text', nullable: true })
+  medicalNotes: string;
+
   @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
