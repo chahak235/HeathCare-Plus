@@ -6,8 +6,12 @@ import { Hospital } from '../entities/Hospital.entity';
 import { NotificationService } from './notification.service';
 import { SocketService } from './socket.service';
 import { GoogleCalendarService } from './google-calendar.service';
+import { sendAppointmentConfirmationEmails } from './appointment-email';
 import { CreateAppointmentDto, AppointmentWithDetails, TimeSlot, AppointmentType, ACTIVE_APPOINTMENT_STATUSES } from '../types/appointment.types';
 import { Between, In, QueryFailedError } from 'typeorm';
+import {
+  addDays, buildDaySlots, BookedRange, clinicDateKey, clinicTime, DEFAULT_DAYS, MAX_BOOKING_DAYS, toClinicDateKey,
+} from '../utils/schedule';
 
 // If you use alertService you must import its type and inject/define it properly; here we add it as optional on the class.
 export class AppointmentService {
@@ -36,77 +40,51 @@ export class AppointmentService {
     const doctor = await this.doctorRepository.findOne({ where: { id: doctorId } });
     if (!doctor) throw new Error('Doctor not found');
 
-    const dateObj = new Date(date);
-    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-    const availableDays = doctor.availableDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    if (!availableDays.includes(dayName)) {
-      return [];
+    const dateKey = toClinicDateKey(date);
+    if (!dateKey) return [];
+
+    const booked = await this.getBookedRanges(doctorId, dateKey, dateKey);
+    return buildDaySlots(doctor, dateKey, booked).map((s) => ({ ...s, doctorId }));
+  }
+
+  /**
+   * Open-slot counts for each day from today, so the booking calendar can
+   * show which dates have openings. One database query for the whole range.
+   */
+  async getAvailabilityRange(doctorId: number, days: number = MAX_BOOKING_DAYS) {
+    const doctor = await this.doctorRepository.findOne({ where: { id: doctorId } });
+    if (!doctor) throw new Error('Doctor not found');
+
+    const count = Math.min(Math.max(days, 1), MAX_BOOKING_DAYS);
+    const first = clinicDateKey(new Date());
+    const last = addDays(first, count - 1);
+    const booked = await this.getBookedRanges(doctorId, first, last);
+
+    const result: { date: string; openSlots: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const dateKey = addDays(first, i);
+      const openSlots = buildDaySlots(doctor, dateKey, booked).filter((s) => s.available).length;
+      result.push({ date: dateKey, openSlots });
     }
+    return {
+      doctorId,
+      acceptingPatients: doctor.isAcceptingPatients !== false,
+      workingDays: doctor.availableDays?.length ? doctor.availableDays : DEFAULT_DAYS,
+      workingHours: doctor.availableHours || '9:00 AM - 5:00 PM',
+      slotMinutes: doctor.consultationDuration || 30,
+      days: result,
+    };
+  }
 
-    let startHour = 9;
-    let endHour = 17;
-    if (doctor.availableHours) {
-      const parts = doctor.availableHours.split('-');
-      if (parts.length === 2) {
-        const parseTime = (timeStr: string) => {
-          const match = timeStr.trim().match(/(\d+)(?::\d+)?\s*(AM|PM)?/i);
-          if (!match) return null;
-          let hour = parseInt(match[1], 10);
-          const ampm = match[2]?.toUpperCase();
-          if (ampm === 'PM' && hour < 12) hour += 12;
-          if (ampm === 'AM' && hour === 12) hour = 0;
-          return hour;
-        };
-        startHour = parseTime(parts[0]) ?? 9;
-        endHour = parseTime(parts[1]) ?? 17;
-      }
-    }
-
-    const slotDuration = doctor.consultationDuration || 30;
-
-    const startOfDay = new Date(date);
-    startOfDay.setHours(startHour, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setHours(endHour, 0, 0, 0);
-
-    const existingAppointments = await this.appointmentRepository.find({
+  private async getBookedRanges(doctorId: number, fromKey: string, toKey: string): Promise<BookedRange[]> {
+    const existing = await this.appointmentRepository.find({
       where: {
         doctorId,
-        scheduledTime: Between(startOfDay, endOfDay),
+        scheduledTime: Between(clinicTime(fromKey, 0), clinicTime(addDays(toKey, 1), 0)),
         status: In(ACTIVE_APPOINTMENT_STATUSES),
-      }
+      },
     });
-
-    const slots: TimeSlot[] = [];
-    let currentSlot = new Date(startOfDay);
-
-    while (currentSlot < endOfDay) {
-      const slotEnd = new Date(currentSlot);
-      slotEnd.setMinutes(slotEnd.getMinutes() + slotDuration);
-
-      if (slotEnd > endOfDay) break;
-
-      const isBooked = existingAppointments.some(apt => {
-        const aptStart = new Date(apt.scheduledTime);
-        const aptEnd = new Date(aptStart);
-        aptEnd.setMinutes(aptEnd.getMinutes() + apt.duration);
-        
-        return (currentSlot >= aptStart && currentSlot < aptEnd) ||
-               (slotEnd > aptStart && slotEnd <= aptEnd);
-      });
-
-      slots.push({
-        startTime: new Date(currentSlot),
-        endTime: new Date(slotEnd),
-        available: !isBooked,
-        doctorId
-      });
-
-      currentSlot = new Date(slotEnd);
-    }
-
-    return slots;
+    return existing.map((apt) => ({ start: new Date(apt.scheduledTime), durationMinutes: apt.duration || 30 }));
   }
 
   /**
@@ -114,7 +92,9 @@ export class AppointmentService {
    * generate meeting link if online, trigger alerts, send notifications,
    * and emit real-time event.
    */
-  async createAppointment(data: CreateAppointmentDto): Promise<AppointmentWithDetails> {
+  async createAppointment(
+    data: CreateAppointmentDto
+  ): Promise<AppointmentWithDetails & { calendarEventCreated: boolean; emailsSent: { patient: boolean; doctor: boolean } }> {
     // Validate patient exists
     const patient = await this.patientRepository.findOne({
       where: { id: data.patientId },
@@ -159,10 +139,12 @@ export class AppointmentService {
     const endTime = new Date(data.scheduledTime);
     endTime.setMinutes(endTime.getMinutes() + duration);
 
-    // Booking only *requests* the slot — the doctor must confirm before it's
-    // final. The Google Meet link is generated on confirmation (see
-    // updateAppointmentStatus), not here, so we never hand a patient a
-    // meeting link for a visit the doctor hasn't actually accepted yet.
+    // By default a booked slot is confirmed straight away, because the slots
+    // shown are the doctor's own published availability. Set
+    // APPOINTMENT_AUTO_CONFIRM=false to make doctors approve each request
+    // (the Meet link is then created when they confirm).
+    const autoConfirm = process.env.APPOINTMENT_AUTO_CONFIRM !== 'false';
+
     const appointment = this.appointmentRepository.create({
       patientId: data.patientId,
       doctorId: data.doctorId,
@@ -173,7 +155,7 @@ export class AppointmentService {
       duration,
       symptoms: data.symptoms || [],
       notes: data.notes,
-      status: 'pending_confirmation',
+      status: autoConfirm ? 'confirmed' : 'pending_confirmation',
       meetingLink: null,
     });
 
@@ -188,6 +170,47 @@ export class AppointmentService {
         throw new Error('This time slot was just booked by someone else — please pick another time.');
       }
       throw err;
+    }
+
+    // Confirmed: put it on Google Calendar (with Meet for online visits)
+    // and email both people. Failures here never undo the booking.
+    let calendarEventCreated = false;
+    let emailsSent = { patient: false, doctor: false };
+    if (autoConfirm) {
+      const isOnline = data.appointmentType === 'online';
+      const meet = await this.calendarService.createMeetingEvent(
+        patient.user?.name || 'Patient',
+        doctor.name,
+        new Date(data.scheduledTime),
+        endTime,
+        patient.user?.email,
+        doctor.email,
+        doctor.googleRefreshToken,
+        isOnline
+      );
+      calendarEventCreated = !!meet.success;
+      if (meet.success && meet.meetLink) {
+        appointment.meetingLink = meet.meetLink;
+        await this.appointmentRepository.save(appointment);
+      } else if (!meet.success) {
+        console.warn(`Google Calendar event not created for appointment ${appointment.id}: ${meet.error}`);
+      }
+
+      emailsSent = await sendAppointmentConfirmationEmails({
+        appointmentId: appointment.id,
+        patientName: patient.user?.name || 'Patient',
+        patientEmail: patient.user?.email,
+        doctorName: doctor.name,
+        doctorEmail: doctor.email,
+        doctorSpecialty: doctor.specialty,
+        hospitalName: hospital.name,
+        hospitalAddress: hospital.address,
+        start: new Date(data.scheduledTime),
+        end: endTime,
+        isOnline,
+        meetLink: appointment.meetingLink,
+        symptoms: data.symptoms,
+      });
     }
 
     // Prepare response with details
@@ -248,8 +271,18 @@ export class AppointmentService {
       }
     }
 
-    // Send notifications
-    if (typeof this.sendAppointmentNotifications === "function") {
+    // Send notifications. A confirmed booking already emailed both people;
+    // just let the doctor's dashboard know live.
+    if (autoConfirm) {
+      await this.notificationService.sendNotification(
+        data.doctorId.toString(),
+        'doctor',
+        'inapp',
+        'high',
+        'New Appointment Booked',
+        `${appointmentWithDetails.patientName} booked a ${data.appointmentType} appointment for ${new Date(data.scheduledTime).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })}.`
+      );
+    } else {
       await this.sendAppointmentNotifications(appointmentWithDetails);
     }
 
@@ -265,7 +298,7 @@ export class AppointmentService {
       });
     }
 
-    return appointmentWithDetails;
+    return { ...appointmentWithDetails, calendarEventCreated, emailsSent };
   }
 
   // Fired right after a patient submits a booking request — nothing is

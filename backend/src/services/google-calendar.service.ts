@@ -70,21 +70,25 @@ export class GoogleCalendarService {
     doctorRefreshToken?: string | null,
     isOnline: boolean = true
   ) {
-    if (!doctorRefreshToken) {
+    // Prefer the doctor's own calendar. Otherwise use the clinic's Google
+    // account (GOOGLE_PLATFORM_REFRESH_TOKEN), which invites both people so
+    // the event still lands in their calendars.
+    const token = doctorRefreshToken || process.env.GOOGLE_PLATFORM_REFRESH_TOKEN || null;
+    if (!token || !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return {
         success: false,
-        error: 'Doctor has not connected Google Calendar',
+        error: 'Google Calendar is not connected',
       };
     }
 
     try {
-      const calendar = this.clientFor(doctorRefreshToken);
+      const calendar = this.clientFor(token);
       const start = startTime instanceof Date ? startTime : new Date(startTime);
       const end = endTime instanceof Date ? endTime : new Date(endTime);
 
       const event: any = {
-        summary: `Medical Consultation: Dr. ${doctorName} & ${patientName}`,
-        description: `${isOnline ? 'Online' : 'In-person'} medical consultation between Dr. ${doctorName} and ${patientName}`,
+        summary: `${isOnline ? 'Online consultation' : 'Clinic visit'}: ${doctorName} & ${patientName}`,
+        description: `${isOnline ? 'Online' : 'In-person'} medical consultation between ${doctorName} and ${patientName}. Booked on HealthCare+.`,
         start: {
           dateTime: start.toISOString(),
           timeZone: 'Asia/Kolkata',
