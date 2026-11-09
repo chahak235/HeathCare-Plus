@@ -36,11 +36,20 @@ cd frontend && npm run dev          # http://localhost:3000
 | 4 | Voice mental health analyzer (record or upload, report), matched to the site theme | Done. Browser measures pace, pauses, pitch, loudness (`voice-features.ts`, checked with a test tone). Backend transcribes with Groq Whisper and writes the report (`backend/src/routes/voice.routes.ts`). Crisis wording shows Tele-MANAS 14416. Needs `GROQ_API_KEY`. Hume AI removed |
 | 5 | Worldwide hospital map: search any state or city, all hospitals, contacts, Google Maps directions | Done. Free OpenStreetMap search (`frontend/src/services/hospital-finder.ts`, page `MapPrediction.tsx`). Tested: 791 hospitals in Pune. Limits: free servers can take 20 to 60 s; only about 4% of hospitals have a phone number in OpenStreetMap (Google Maps link shows the rest). Fake hospitals removed. Later: cache results on the backend to make it faster |
 | 6 | Emergency: patient profile (contacts, height, weight, conditions), emergency button calls hospital and family | Done, not tested with a logged-in user (needs the database). New `/emergency` page: Call 112, SOS finds nearest hospital, call and text buttons for nearest hospital, usual hospital and family, automatic email to family with location and health details. Health profile form on `/profile` (patients are sent there after sign-up). Backend `backend/src/routes/emergency.routes.ts` (login required). Navbar emergency link fixed (was a broken `tel:911`) |
-| 7 | Run everything locally and test | Not started |
+| 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
-## Next step
+## Next steps (in order)
 
-Task 6: emergency (patient health profile with family contacts, height, weight, conditions; emergency page that calls the nearest hospital and alerts family).
+1. **Create `backend/.env`** from `backend/.env.example`. Fill in the PostgreSQL password (Postgres 18 is installed on this PC), `JWT_SECRET` and `GROQ_API_KEY`. Restart the backend; it creates the tables and seeds 15 doctors.
+2. **Test end to end**: sign up as a patient, fill the health profile, book an online and an offline appointment, try SOS, try the voice analyzer, and try a real chest X-ray.
+3. **Email**: add `SMTP_USER` / `SMTP_PASS` (Gmail App Password) so confirmations reach real inboxes.
+4. **Google Meet and Calendar**: create the Google OAuth client, then run `npm run google-auth` in `backend`.
+5. **Product website polish**: business branding, landing page copy, pricing or contact page, remove leftover demo content (random success stories, random clinic phone numbers on the Doctors page).
+6. **Doctor mode**: doctor sign-up already lets doctors set days and hours in the dashboard settings. Could add per-day hours and holidays.
+7. **Hospital/admin mode**: review the hospital dashboard (beds, doctors) for real data.
+8. **Security before launch**: add login checks to appointment and doctor routes, turn off `synchronize: true` in production, protect the Google connect route.
+9. **Skin model**: when your friend sends it, convert to ONNX and enable it (see task 1 note).
+10. **Deploy**: add the new environment variables on Render, then push to your GitHub repo when you're ready.
 
 To add the skin model later: convert it to ONNX the same way, put it in `frontend/public/models/`, and set `skinModelReady` in `frontend/src/pages/ImageAnalysis.tsx`.
 
