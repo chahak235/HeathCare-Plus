@@ -1,0 +1,26 @@
+{
+  "model_name": "xray_pneumonia",
+  "version": "3.0-pytorch",
+  "task": "binary_classification",
+  "img_size": [
+    224,
+    224
+  ],
+  "channels": 3,
+  "normalization": "imagenet",
+  "class_names": [
+    "NORMAL",
+    "PNEUMONIA"
+  ],
+  "threshold": 0.6251,
+  "positive_class": "PNEUMONIA",
+  "negative_class": "NORMAL",
+  "metrics": {
+    "test_accuracy_pct": 88.5,
+    "test_sensitivity_pct": 91.5,
+    "test_specificity_pct": 83.3,
+    "val_auc": 0.9833,
+    "threshold": 0.6251
+  },
+  "disclaimer": "Educational only. Not a clinical diagnostic tool."
+}
