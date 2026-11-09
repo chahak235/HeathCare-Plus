@@ -20,15 +20,16 @@ export class AppointmentController {
   async getAvailableSlots(req: Request, res: Response) {
     try {
       const doctorId = parseInt(req.query.doctorId as string);
-      const date = new Date(req.query.date as string);
+      const date = String(req.query.date ?? '');
 
-      if (isNaN(doctorId) || isNaN(date.getTime())) {
+      if (isNaN(doctorId) || isNaN(new Date(date).getTime())) {
         return res.status(400).json({
           success: false,
           error: 'Valid doctorId and date are required'
         });
       }
 
+      // A plain "YYYY-MM-DD" is read as a clinic-local date, not UTC midnight
       const slots = await this.appointmentService.getAvailableSlots(doctorId, date);
       
       return res.json({
@@ -41,6 +42,26 @@ export class AppointmentController {
         success: false,
         error: error.message || 'Internal server error'
       });
+    }
+  }
+
+  /**
+   * GET /api/appointments/availability?doctorId=1&days=90
+   * Open-slot counts per day, for the booking calendar
+   */
+  async getAvailability(req: Request, res: Response) {
+    try {
+      const doctorId = parseInt(req.query.doctorId as string);
+      const days = req.query.days ? parseInt(req.query.days as string) : undefined;
+      if (isNaN(doctorId)) {
+        return res.status(400).json({ success: false, error: 'Valid doctorId is required' });
+      }
+      const data = await this.appointmentService.getAvailabilityRange(doctorId, days);
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      console.error('Get availability error:', error);
+      const status = error.message === 'Doctor not found' ? 404 : 500;
+      return res.status(status).json({ success: false, error: error.message || 'Internal server error' });
     }
   }
 
