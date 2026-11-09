@@ -31,8 +31,8 @@ cd frontend && npm run dev          # http://localhost:3000
 |---|------|--------|
 | 0 | Groq AI fixes, honest AI labels, git repo set up | Done |
 | 1 | X-ray model in browser, image analyzer with only X-ray and Skin | Done. Model at `frontend/public/models/xray_pneumonia.onnx`, code in `frontend/src/services/xray-model-service.ts`. Tested in browser with a synthetic image only; try a real chest X-ray |
-| 2 | Appointments: full calendar, doctor slots, online vs offline booking, video consult goes to online booking | Not started |
-| 3 | Google Meet, Google Calendar and email to patient and doctor on booking | Not started |
+| 2 | Appointments: full calendar, doctor slots, online vs offline booking, video consult goes to online booking | Done. Month calendar for 90 days (`BookingCalendar.tsx`), In-clinic and Online tabs, slots in India time with past slots hidden (`backend/src/utils/schedule.ts`, 15 tests pass). Doctors set days and hours in the doctor dashboard settings |
+| 3 | Google Meet, Google Calendar and email to patient and doctor on booking | Done in code, needs your Google and email settings to work for real. Booking is confirmed instantly, a Google Calendar event (with Meet for online) invites both people, and both get an email with a calendar file. See `backend/.env.example` and run `npm run google-auth` once |
 | 4 | Voice mental health analyzer (record or upload, report), matched to the site theme | Not started |
 | 5 | Worldwide hospital map: search any state or city, all hospitals, contacts, Google Maps directions | Not started |
 | 6 | Emergency: patient profile (contacts, height, weight, conditions), emergency button calls hospital and family | Not started |
@@ -40,7 +40,7 @@ cd frontend && npm run dev          # http://localhost:3000
 
 ## Next step
 
-Task 2: appointments (full calendar of dates, doctor slots, online vs offline).
+Task 4: voice mental health analyzer (record or upload, voice features, Groq transcript and report), restyled to match the site.
 
 To add the skin model later: convert it to ONNX the same way, put it in `frontend/public/models/`, and set `skinModelReady` in `frontend/src/pages/ImageAnalysis.tsx`.
 
