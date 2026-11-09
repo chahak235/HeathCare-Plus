@@ -34,13 +34,13 @@ cd frontend && npm run dev          # http://localhost:3000
 | 2 | Appointments: full calendar, doctor slots, online vs offline booking, video consult goes to online booking | Done. Month calendar for 90 days (`BookingCalendar.tsx`), In-clinic and Online tabs, slots in India time with past slots hidden (`backend/src/utils/schedule.ts`, 15 tests pass). Doctors set days and hours in the doctor dashboard settings |
 | 3 | Google Meet, Google Calendar and email to patient and doctor on booking | Done in code, needs your Google and email settings to work for real. Booking is confirmed instantly, a Google Calendar event (with Meet for online) invites both people, and both get an email with a calendar file. See `backend/.env.example` and run `npm run google-auth` once |
 | 4 | Voice mental health analyzer (record or upload, report), matched to the site theme | Done. Browser measures pace, pauses, pitch, loudness (`voice-features.ts`, checked with a test tone). Backend transcribes with Groq Whisper and writes the report (`backend/src/routes/voice.routes.ts`). Crisis wording shows Tele-MANAS 14416. Needs `GROQ_API_KEY`. Hume AI removed |
-| 5 | Worldwide hospital map: search any state or city, all hospitals, contacts, Google Maps directions | Not started |
+| 5 | Worldwide hospital map: search any state or city, all hospitals, contacts, Google Maps directions | Done. Free OpenStreetMap search (`frontend/src/services/hospital-finder.ts`, page `MapPrediction.tsx`). Tested: 791 hospitals in Pune. Limits: free servers can take 20 to 60 s; only about 4% of hospitals have a phone number in OpenStreetMap (Google Maps link shows the rest). Fake hospitals removed. Later: cache results on the backend to make it faster |
 | 6 | Emergency: patient profile (contacts, height, weight, conditions), emergency button calls hospital and family | Not started |
 | 7 | Run everything locally and test | Not started |
 
 ## Next step
 
-Task 5: worldwide hospital map (OpenStreetMap search for any place, all hospitals with contacts, Google Maps directions).
+Task 6: emergency (patient health profile with family contacts, height, weight, conditions; emergency page that calls the nearest hospital and alerts family).
 
 To add the skin model later: convert it to ONNX the same way, put it in `frontend/public/models/`, and set `skinModelReady` in `frontend/src/pages/ImageAnalysis.tsx`.
 
