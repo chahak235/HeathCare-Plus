@@ -202,9 +202,9 @@ export const SignUp: React.FC = () => {
       if (result.success) {
         setSignUpSuccess(true);
 
-        // Redirect after 3 seconds
+        // Patients go straight to their health and emergency profile
         setTimeout(() => {
-          navigate('/');
+          navigate(formData.role === 'patient' ? '/profile#health-profile' : '/');
         }, 3000);
       } else {
         setErrors({ email: result.error || 'Unable to create account. This email may already be registered.' });

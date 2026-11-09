@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import HealthProfileForm from '../components/emergency/HealthProfileForm';
 import { Container } from '../components/layout/Container';
 import { GlassCard } from '../components/layout/GlassCard';
 import { Button } from '../components/ui/Button';
@@ -33,21 +35,12 @@ interface UserProfile {
 
 export const Profile: React.FC = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const userData = localStorage.getItem('user');
-        if (userData) {
-            setUser(JSON.parse(userData));
-        }
-        setLoading(false);
-    }, []);
+    const { user: authUser, logout } = useAuth();
+    const user = authUser as unknown as UserProfile | null;
+    const loading = false;
 
     const handleLogout = () => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        window.dispatchEvent(new Event('storage'));
+        logout();
         navigate('/login');
     };
 
@@ -75,6 +68,16 @@ export const Profile: React.FC = () => {
                         Manage your healthcare profile and preferences
                     </p>
                 </div>
+
+                {user.role === 'patient' && (
+                    <section id="health-profile" className="mb-8">
+                        <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Health & emergency profile</h2>
+                        <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                            Used by the emergency button to alert your family and show your medical details to responders.
+                        </p>
+                        <HealthProfileForm />
+                    </section>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column - Profile Info */}
