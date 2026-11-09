@@ -22,6 +22,9 @@ function bind(method: keyof AppointmentController) {
 // Get available slots
 router.get('/slots', bind('getAvailableSlots'));
 
+// Open-slot counts per day for the booking calendar
+router.get('/availability', bind('getAvailability'));
+
 // Get patient ID for user (booking flow)
 router.get('/patient-for-user/:userId', bind('getPatientForUser'));
 
