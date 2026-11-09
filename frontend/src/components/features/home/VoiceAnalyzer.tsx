@@ -1,410 +1,426 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import axios from 'axios'
-import { Mic, MicOff, Upload, Activity, Heart, Brain, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react'
+import {
+  Mic, Square, Upload, Activity, Brain, AlertCircle, CheckCircle, BarChart3, Download, Phone, RotateCcw, FileAudio,
+} from 'lucide-react'
+import { extractVoiceFeatures, VoiceFeatures } from '../../../services/voice-features'
 
-interface Emotion {
-  emotion: string
-  score: number
+const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api'
+const MIN_SECONDS = 10
+const MAX_SECONDS = 120
+
+interface Report {
+  overallState: string
+  summary: string
+  scores: { stress: number; anxiety: number; lowMood: number; energy: number; calm: number } | null
+  emotions: { emotion: string; score: number }[]
+  voiceObservations: string[]
+  suggestions: string[]
+  seekHelp: boolean
+  seekHelpReason: string
 }
 
-interface AnalysisResult {
-  mentalState: string
-  emotions: Emotion[]
-  warning: string | null
-  patient_id?: string
-  session_id?: string
-  filename?: string
+interface AnalysisResponse {
+  transcript: string
+  features: VoiceFeatures | null
+  report: Report
+  crisisResources: { name: string; phone: string }[]
+  generatedAt: string
+}
+
+const SCORE_LABELS: { key: keyof NonNullable<Report['scores']>; label: string; good: 'low' | 'high' }[] = [
+  { key: 'stress', label: 'Stress', good: 'low' },
+  { key: 'anxiety', label: 'Anxiety', good: 'low' },
+  { key: 'lowMood', label: 'Low mood', good: 'low' },
+  { key: 'energy', label: 'Energy', good: 'high' },
+  { key: 'calm', label: 'Calm', good: 'high' },
+]
+
+const scoreColor = (value: number, good: 'low' | 'high') => {
+  const concern = good === 'low' ? value : 100 - value
+  if (concern >= 65) return 'bg-red-500'
+  if (concern >= 40) return 'bg-amber-500'
+  return 'bg-emerald-500'
 }
 
 const VoiceAnalyzer: React.FC = () => {
   const [recording, setRecording] = useState(false)
-  const [recordingDuration, setRecordingDuration] = useState(0)
-  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null)
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [seconds, setSeconds] = useState(0)
+  const [audio, setAudio] = useState<{ blob: Blob; name: string } | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [levels, setLevels] = useState<number[]>([])
+  const [stage, setStage] = useState<'idle' | 'measuring' | 'analysing'>('idle')
+  const [result, setResult] = useState<AnalysisResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [audioLevel, setAudioLevel] = useState<number[]>([])
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-  const animationFrameRef = useRef<number>()
   const streamRef = useRef<MediaStream | null>(null)
+  const ctxRef = useRef<AudioContext | null>(null)
+  const rafRef = useRef<number>()
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const cleanupAudio = useCallback(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = undefined
+  const stopMeters = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = null
+    ctxRef.current?.close().catch(() => undefined)
+    ctxRef.current = null
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+  }, [])
+
+  useEffect(() => () => stopMeters(), [stopMeters])
+  useEffect(() => {
+    if (!audio) {
+      setAudioUrl(null)
+      return
     }
-    if (sourceRef.current) {
-      try { sourceRef.current.disconnect() } catch (e) {}
-      sourceRef.current = null
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(console.error)
-      audioContextRef.current = null
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        try { track.stop() } catch (e) {}
-      })
-      streamRef.current = null
-    }
-    analyserRef.current = null
+    const url = URL.createObjectURL(audio.blob)
+    setAudioUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [audio])
+
+  const stopRecording = useCallback(() => {
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop()
+    setRecording(false)
   }, [])
 
   useEffect(() => {
-    return () => {
-      if (recordingTimer) clearInterval(recordingTimer)
-      cleanupAudio()
-    }
-  }, [recordingTimer, cleanupAudio])
+    if (recording && seconds >= MAX_SECONDS) stopRecording()
+  }, [recording, seconds, stopRecording])
 
   const startRecording = async () => {
+    setError(null)
+    setResult(null)
     try {
-      cleanupAudio()
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
       streamRef.current = stream
-      
-      audioContextRef.current = new AudioContext()
-      analyserRef.current = audioContextRef.current.createAnalyser()
-      sourceRef.current = audioContextRef.current.createMediaStreamSource(stream)
-      sourceRef.current.connect(analyserRef.current)
-      analyserRef.current.fftSize = 256
-      
-      const visualize = () => {
-        if (!analyserRef.current || !audioContextRef.current || audioContextRef.current.state === 'closed') return
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
-        analyserRef.current.getByteFrequencyData(dataArray)
-        const average = Array.from(dataArray.slice(0, 10)).reduce((a, b) => a + b, 0) / 10
-        setAudioLevel(prev => [...prev.slice(-19), average])
-        animationFrameRef.current = requestAnimationFrame(visualize)
-      }
-      visualize()
 
-      mediaRecorderRef.current = new MediaRecorder(stream)
+      const ctx = new AudioContext()
+      ctxRef.current = ctx
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      ctx.createMediaStreamSource(stream).connect(analyser)
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      const tick = () => {
+        analyser.getByteFrequencyData(data)
+        const avg = data.slice(0, 24).reduce((a, b) => a + b, 0) / 24
+        setLevels((prev) => [...prev.slice(-39), avg])
+        rafRef.current = requestAnimationFrame(tick)
+      }
+      tick()
+
+      const recorder = new MediaRecorder(stream)
+      recorderRef.current = recorder
       chunksRef.current = []
+      recorder.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data)
+      recorder.onstop = () => {
+        const type = recorder.mimeType || 'audio/webm'
+        setAudio({ blob: new Blob(chunksRef.current, { type }), name: 'Recording' })
+        setLevels([])
+        stopMeters()
+      }
+      recorder.start()
+      setSeconds(0)
+      setRecording(true)
+      timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000)
+    } catch {
+      setError('Microphone access was blocked. Allow microphone access in your browser, or upload an audio file instead.')
+    }
+  }
 
-      mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data)
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/wav' })
-        setAudioBlob(blob)
-        setUploadedFile(null)
-        setAudioLevel([])
-        cleanupAudio()
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 25 * 1024 * 1024) {
+      setError('That file is larger than 25 MB. Please upload a shorter clip.')
+      return
+    }
+    setError(null)
+    setResult(null)
+    setAudio({ blob: file, name: file.name })
+  }
+
+  const analyse = async () => {
+    if (!audio) return
+    setError(null)
+    setResult(null)
+    try {
+      setStage('measuring')
+      let features: VoiceFeatures | null = null
+      try {
+        features = await extractVoiceFeatures(audio.blob)
+      } catch (err) {
+        console.warn('Could not measure voice features:', err)
+      }
+      if (features && features.speechSec < 3) {
+        setError('We could hardly hear any speech. Please speak closer to the microphone for at least 20 seconds.')
+        return
       }
 
-      mediaRecorderRef.current.start()
-      setRecording(true)
-      setRecordingDuration(0)
-
-      const timer = setInterval(() => setRecordingDuration((prev) => prev + 1), 1000)
-      setRecordingTimer(timer)
-    } catch (err) {
-      console.error('Recording error:', err)
-      setError('Microphone access denied. Please allow microphone access.')
+      setStage('analysing')
+      const form = new FormData()
+      const ext = (audio.blob.type.split('/')[1] || 'webm').split(';')[0]
+      form.append('file', audio.blob, audio.name.includes('.') ? audio.name : `recording.${ext}`)
+      if (features) form.append('features', JSON.stringify(features))
+      const { data } = await axios.post<AnalysisResponse>(`${API_URL}/voice/analyze`, form, { timeout: 90000 })
+      setResult(data)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Voice analysis failed. Please check your connection and try again.')
+    } finally {
+      setStage('idle')
     }
   }
 
-  const stopRecording = () => {
-    if (recordingDuration < 3) {
-      alert(`Please record for at least 3 seconds. You've recorded ${recordingDuration}s.`)
-      return
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-    }
-    if (recordingTimer) {
-      clearInterval(recordingTimer)
-      setRecordingTimer(null)
-    }
-    setRecording(false)
+  const downloadReport = () => {
+    if (!result) return
+    const r = result.report
+    const f = result.features
+    const lines = [
+      'HEALTHCARE+ VOICE WELLBEING SCREENING REPORT',
+      `Generated: ${new Date(result.generatedAt).toLocaleString()}`,
+      '',
+      `Overall: ${r.overallState}`,
+      r.summary,
+      '',
+      ...(r.scores ? ['SCORES (0-100)', ...SCORE_LABELS.map((s) => `  ${s.label}: ${r.scores![s.key]}`), ''] : []),
+      ...(r.emotions.length ? ['EMOTIONS', ...r.emotions.map((e) => `  ${e.emotion}: ${e.score}`), ''] : []),
+      ...(f
+        ? [
+            'VOICE MEASUREMENTS',
+            `  Length: ${f.durationSec}s (speech ${f.speechSec}s)`,
+            `  Silence: ${Math.round(f.pauseRatio * 100)}%, long pauses per minute: ${f.pausesPerMin}`,
+            `  Pitch: ${f.pitchHz ?? 'n/a'} Hz, variation ${f.pitchVariationSemitones ?? 'n/a'} semitones`,
+            `  Loudness variation: ${f.loudnessVariationDb} dB`,
+            '',
+          ]
+        : []),
+      ...(r.voiceObservations.length ? ['OBSERVATIONS', ...r.voiceObservations.map((o) => `  - ${o}`), ''] : []),
+      ...(r.suggestions.length ? ['SUGGESTIONS', ...r.suggestions.map((s) => `  - ${s}`), ''] : []),
+      ...(result.crisisResources.length ? ['SUPPORT', ...result.crisisResources.map((c) => `  ${c.name}: ${c.phone}`), ''] : []),
+      'TRANSCRIPT',
+      result.transcript,
+      '',
+      'This is a wellbeing screening, not a medical diagnosis. Please talk to a qualified professional about your mental health.',
+    ]
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `voice-wellbeing-report-${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(a.href)
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setUploadedFile(file)
-      setAudioBlob(null)
-    }
-  }
-
-  const analyzeVoice = async () => {
-    const audioSource = audioBlob || uploadedFile
-    if (!audioSource) {
-      alert('Please record or upload audio first')
-      return
-    }
-
-    setLoading(true)
+  const reset = () => {
+    setAudio(null)
     setResult(null)
     setError(null)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', audioSource, 'audio.wav')
-
-      // Your FastAPI expects a separate 'request' field with JSON
-      const requestData = {
-        patient_id: 'patient-123',
-        session_id: `session-${Date.now()}`
-      }
-      formData.append('request', JSON.stringify(requestData))
-
-      console.log('📤 Sending to voice analysis API on port 3001...')
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api'}/voice/analyze`,
-        formData,
-        { 
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 30000
-        }
-      )
-
-      console.log('✅ Response received:', response.data)
-      
-      const data = response.data
-      
-      // Extract emotions from response
-      const emotions = data.emotions || []
-      
-      // Determine mental state
-      let mentalState = 'Stable'
-      if (emotions.length > 0) {
-        const topEmotion = emotions[0].emotion
-        const stressEmotions = ['Distress', 'Anxiety', 'Anger', 'Fear', 'Stress']
-        const lowEmotions = ['Sadness', 'Tiredness', 'Boredom', 'Loneliness', 'Depression']
-        const positiveEmotions = ['Calmness', 'Contentment', 'Excitement', 'Joy', 'Happiness', 'Relaxed']
-        
-        if (stressEmotions.includes(topEmotion)) mentalState = 'High Stress Detected'
-        else if (lowEmotions.includes(topEmotion)) mentalState = 'Low / Depressive Indicators'
-        else if (positiveEmotions.includes(topEmotion)) mentalState = 'Uplifted / Positive'
-      }
-
-      setResult({
-        mentalState: data.mental_state || mentalState,
-        emotions: emotions,
-        warning: data.warning || null,
-        patient_id: data.patient_id,
-        session_id: data.session_id
-      })
-      
-    } catch (err: any) {
-      console.error('❌ Analysis error:', err)
-      
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        console.error('Error response:', err.response.data)
-        console.error('Error status:', err.response.status)
-        setError(`Server error (${err.response.status}): ${err.response.data?.detail || 'Unknown error'}`)
-      } else if (err.request) {
-        // The request was made but no response was received
-        setError('No response from server. Please check if the voice analysis service is running.')
-      } else {
-        // Something happened in setting up the request
-        setError(err.message || 'Analysis failed. Please try again.')
-      }
-    } finally {
-      setLoading(false)
-    }
   }
 
-  const getStateColor = (state: string) => {
-    if (state === 'High Stress Detected') return '#ef4444'
-    if (state === 'Low / Depressive Indicators') return '#f97316'
-    if (state === 'Uplifted / Positive') return '#10b981'
-    if (state === 'Stable') return '#00C2CB'
-    return '#94a3b8'
-  }
-
-  const getBarColor = (emotion: string) => {
-    const stressEmotions = ['Distress', 'Anxiety', 'Anger', 'Fear', 'Stress']
-    const lowEmotions = ['Sadness', 'Tiredness', 'Boredom', 'Loneliness', 'Depression']
-    const positiveEmotions = ['Calmness', 'Contentment', 'Excitement', 'Joy', 'Happiness', 'Relaxed']
-    
-    if (stressEmotions.includes(emotion)) return '#ef4444'
-    if (lowEmotions.includes(emotion)) return '#f97316'
-    if (positiveEmotions.includes(emotion)) return '#10b981'
-    return '#00C2CB'
-  }
-
-  const getEmotionIcon = (emotion: string) => {
-    const stressEmotions = ['Distress', 'Anxiety', 'Anger', 'Fear', 'Stress']
-    const lowEmotions = ['Sadness', 'Tiredness', 'Boredom', 'Loneliness', 'Depression']
-    const positiveEmotions = ['Calmness', 'Contentment', 'Excitement', 'Joy', 'Happiness', 'Relaxed']
-    
-    if (stressEmotions.includes(emotion)) return <AlertCircle className="w-4 h-4 text-red-500" />
-    if (lowEmotions.includes(emotion)) return <Activity className="w-4 h-4 text-orange-500" />
-    if (positiveEmotions.includes(emotion)) return <Heart className="w-4 h-4 text-green-500" />
-    return <Brain className="w-4 h-4 text-medical-cyan" />
-  }
+  const busy = stage !== 'idle'
+  const card = 'p-5 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'
 
   return (
-    <div className="bg-medical-navy/95 backdrop-blur-sm rounded-xl p-6 border border-medical-cyan/20 shadow-xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-medical-cyan/10 rounded-lg">
-          <Mic className="w-6 h-6 text-medical-cyan" />
+    <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-white via-white to-primary-50/60 dark:from-neutral-900 dark:via-neutral-900 dark:to-primary-950/30 p-6 md:p-8 shadow-sm">
+      <div className="flex items-start gap-4 mb-6">
+        <div className="p-3 rounded-2xl bg-primary-100 dark:bg-primary-900/40">
+          <Mic className="w-7 h-7 text-primary-600 dark:text-primary-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-white font-heading">Voice Mental Health Analyzer</h2>
-          <p className="text-sm text-gray-400">AI-powered emotion detection from speech</p>
+          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">Voice Mental Health Analyzer</h2>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            Talk for 20 to 60 seconds about how you've been feeling. We look at what you say and how you say it.
+          </p>
         </div>
       </div>
 
-      {recording && audioLevel.length > 0 && (
-        <div className="mb-6 p-4 bg-medical-navy/50 rounded-lg border border-medical-cyan/20">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400">Recording... {recordingDuration}s / 3s min</span>
-            <span className="text-xs text-red-400 animate-pulse">🔴 LIVE</span>
-          </div>
-          <div className="flex items-end h-16 gap-0.5">
-            {audioLevel.map((level, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-gradient-to-t from-medical-cyan to-medical-cyan/50 rounded-t"
-                style={{ height: `${Math.min(level, 100)}%` }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {!result && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div className={card}>
+              <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">Record your voice</p>
+              <button
+                type="button"
+                onClick={recording ? stopRecording : startRecording}
+                disabled={busy || (recording && seconds < MIN_SECONDS)}
+                className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-60 ${
+                  recording ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-primary-600 text-white hover:bg-primary-700'
+                }`}
+              >
+                {recording ? <Square className="w-4 h-4" /> : <Mic className="w-5 h-5" />}
+                {recording ? (seconds < MIN_SECONDS ? `Keep talking… ${MIN_SECONDS - seconds}s` : `Stop (${seconds}s)`) : 'Start recording'}
+              </button>
+              {recording && (
+                <div className="mt-3 flex items-end gap-0.5 h-12" aria-hidden>
+                  {levels.map((l, i) => (
+                    <div key={i} className="flex-1 rounded-t bg-primary-500/80" style={{ height: `${Math.max(4, Math.min(100, l))}%` }} />
+                  ))}
+                </div>
+              )}
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Minimum {MIN_SECONDS}s, stops at {MAX_SECONDS / 60} min.</p>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="p-4 bg-medical-navy/50 rounded-lg border border-gray-700">
-          <p className="text-sm font-medium text-gray-300 mb-3">Option 1 — Record</p>
+            <div className={card}>
+              <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-3">Or upload a file</p>
+              <label className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 border-2 border-dashed border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-200 hover:border-primary-500 cursor-pointer ${busy || recording ? 'pointer-events-none opacity-60' : ''}`}>
+                <Upload className="w-5 h-5 text-primary-600" />
+                Choose audio file
+                <input type="file" accept="audio/*,.m4a,.mp3,.wav,.webm,.ogg" onChange={handleUpload} className="hidden" />
+              </label>
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">MP3, M4A, WAV, WEBM or OGG, up to 25 MB.</p>
+            </div>
+          </div>
+
+          {audio && !recording && (
+            <div className={`${card} mb-5 flex flex-col sm:flex-row sm:items-center gap-3`}>
+              <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300 min-w-0">
+                <FileAudio className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                <span className="truncate">{audio.name}</span>
+              </div>
+              {audioUrl && <audio controls src={audioUrl} className="w-full sm:flex-1 h-10" />}
+            </div>
+          )}
+
           <button
-            onClick={recording ? stopRecording : startRecording}
-            className={`w-full py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-              recording 
-                ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30' 
-                : 'bg-medical-cyan/10 text-medical-cyan border border-medical-cyan/50 hover:bg-medical-cyan/20'
-            }`}
+            type="button"
+            onClick={analyse}
+            disabled={!audio || busy || recording}
+            className="w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-cyan-500 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {recording ? (
+            {busy ? (
               <>
-                <MicOff className="w-5 h-5" />
-                Stop Recording ({recordingDuration}s / 3s min)
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                {stage === 'measuring' ? 'Measuring your voice…' : 'Listening and writing your report…'}
               </>
             ) : (
               <>
-                <Mic className="w-5 h-5" />
-                Start Recording
+                <BarChart3 className="w-5 h-5" /> Analyze my voice
               </>
             )}
           </button>
-          {audioBlob && !recording && (
-            <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" /> Audio ready
-            </p>
-          )}
-        </div>
-
-        <div className="p-4 bg-medical-navy/50 rounded-lg border border-gray-700">
-          <p className="text-sm font-medium text-gray-300 mb-3">Option 2 — Upload</p>
-          <label className="w-full py-3 px-4 rounded-lg font-medium transition-all bg-medical-navy border border-gray-600 hover:border-medical-cyan/50 flex items-center justify-center gap-2 cursor-pointer">
-            <Upload className="w-5 h-5 text-medical-cyan" />
-            Choose Audio File
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
-          {uploadedFile && (
-            <p className="text-xs text-green-400 mt-2 flex items-center gap-1 truncate">
-              <CheckCircle className="w-3 h-3" /> {uploadedFile.name}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <button
-        onClick={analyzeVoice}
-        disabled={loading || (!audioBlob && !uploadedFile)}
-        className={`w-full py-4 rounded-lg font-bold text-lg transition-all flex items-center justify-center gap-2 ${
-          loading || (!audioBlob && !uploadedFile)
-            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-medical-cyan to-medical-cyan/80 text-white hover:shadow-lg hover:shadow-medical-cyan/20'
-        }`}
-      >
-        {loading ? (
-          <>
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-            Analyzing...
-          </>
-        ) : (
-          <>
-            <BarChart3 className="w-5 h-5" />
-            Analyze Voice
-          </>
-        )}
-      </button>
+        </>
+      )}
 
       {error && (
-        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
 
       {result && (
-        <div className="mt-6 space-y-4">
-          <div className={`p-4 rounded-lg text-center font-bold text-lg ${
-            result.mentalState === 'High Stress Detected' ? 'bg-red-500/20 text-red-400 border border-red-500/50' :
-            result.mentalState === 'Low / Depressive Indicators' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' :
-            result.mentalState === 'Uplifted / Positive' ? 'bg-green-500/20 text-green-400 border border-green-500/50' :
-            'bg-medical-cyan/10 text-medical-cyan border border-medical-cyan/50'
-          }`}>
-            {result.mentalState}
-          </div>
-
-          {result.warning && (
-            <div className="p-3 bg-orange-500/10 border border-orange-500/50 rounded-lg text-sm text-orange-400 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {result.warning}
+        <div className="space-y-4">
+          {result.report.seekHelp && (
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <p className="font-semibold text-red-800 dark:text-red-200 mb-1">Please reach out for support</p>
+              {result.report.seekHelpReason && <p className="text-sm text-red-700 dark:text-red-300 mb-2">{result.report.seekHelpReason}</p>}
+              <div className="flex flex-wrap gap-2">
+                {result.crisisResources.map((c) => (
+                  <a key={c.phone} href={`tel:${c.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">
+                    <Phone className="w-4 h-4" /> {c.name}: {c.phone}
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
-              <Activity className="w-4 h-4" />
-              Emotion Analysis
-            </h3>
-            {result.emotions.map((e) => (
-              <div key={e.emotion} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-gray-300">
-                    {getEmotionIcon(e.emotion)}
-                    {e.emotion}
-                  </span>
-                  <span className="font-bold" style={{ color: getBarColor(e.emotion) }}>
-                    {e.score}%
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${e.score}%`,
-                      backgroundColor: getBarColor(e.emotion)
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+          <div className={card}>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Overall</p>
+            <p className="text-2xl font-bold text-primary-700 dark:text-primary-300">{result.report.overallState}</p>
+            <p className="mt-2 text-neutral-700 dark:text-neutral-300">{result.report.summary}</p>
           </div>
 
-          <p className="text-xs text-gray-500 mt-4 pt-4 border-t border-gray-700">
-            ⚠️ Screening tool only. Not a medical diagnosis.
-          </p>
+          {result.report.scores && (
+            <div className={card}>
+              <h3 className="font-semibold text-neutral-900 dark:text-white mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Wellbeing indicators</h3>
+              <div className="space-y-3">
+                {SCORE_LABELS.map((s) => {
+                  const v = Math.max(0, Math.min(100, Math.round(result.report.scores![s.key] ?? 0)))
+                  return (
+                    <div key={s.key}>
+                      <div className="flex justify-between text-sm mb-1 text-neutral-700 dark:text-neutral-300">
+                        <span>{s.label}</span>
+                        <span className="font-semibold">{v}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
+                        <div className={`h-full rounded-full ${scoreColor(v, s.good)}`} style={{ width: `${v}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {result.report.emotions.length > 0 && (
+              <div className={card}>
+                <h3 className="font-semibold text-neutral-900 dark:text-white mb-3 flex items-center gap-2"><Brain className="w-4 h-4" /> Emotions noticed</h3>
+                <div className="flex flex-wrap gap-2">
+                  {result.report.emotions.map((e) => (
+                    <span key={e.emotion} className="px-3 py-1 rounded-full text-sm bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                      {e.emotion} · {e.score}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.features && (
+              <div className={card}>
+                <h3 className="font-semibold text-neutral-900 dark:text-white mb-3">How you spoke</h3>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <dt className="text-neutral-500">Speaking time</dt><dd className="text-neutral-800 dark:text-neutral-200">{result.features.speechSec}s of {result.features.durationSec}s</dd>
+                  <dt className="text-neutral-500">Silence</dt><dd className="text-neutral-800 dark:text-neutral-200">{Math.round(result.features.pauseRatio * 100)}%</dd>
+                  <dt className="text-neutral-500">Long pauses</dt><dd className="text-neutral-800 dark:text-neutral-200">{result.features.pausesPerMin} per min</dd>
+                  <dt className="text-neutral-500">Pitch variation</dt><dd className="text-neutral-800 dark:text-neutral-200">{result.features.pitchVariationSemitones ?? 'n/a'} semitones</dd>
+                </dl>
+              </div>
+            )}
+          </div>
+
+          {(result.report.voiceObservations.length > 0 || result.report.suggestions.length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {result.report.voiceObservations.length > 0 && (
+                <div className={card}>
+                  <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Observations</h3>
+                  <ul className="space-y-1.5 text-sm text-neutral-700 dark:text-neutral-300">
+                    {result.report.voiceObservations.map((o) => <li key={o}>• {o}</li>)}
+                  </ul>
+                </div>
+              )}
+              {result.report.suggestions.length > 0 && (
+                <div className={card}>
+                  <h3 className="font-semibold text-neutral-900 dark:text-white mb-2 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Suggestions</h3>
+                  <ul className="space-y-1.5 text-sm text-neutral-700 dark:text-neutral-300">
+                    {result.report.suggestions.map((s) => <li key={s}>• {s}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <details className={card}>
+            <summary className="cursor-pointer font-semibold text-neutral-900 dark:text-white">What we heard (transcript)</summary>
+            <p className="mt-2 text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">{result.transcript || '(no speech recognised)'}</p>
+          </details>
+
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={downloadReport} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 text-white hover:bg-primary-700">
+              <Download className="w-4 h-4" /> Download report
+            </button>
+            <button type="button" onClick={reset} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-200">
+              <RotateCcw className="w-4 h-4" /> New analysis
+            </button>
+          </div>
         </div>
       )}
+
+      <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 pt-4">
+        Wellbeing screening, not a diagnosis. Your recording is sent to our AI provider (Groq) to transcribe and analyse, and is not stored.
+        If you are in distress, call Tele-MANAS on 14416 (free, 24x7).
+      </p>
     </div>
   )
 }
