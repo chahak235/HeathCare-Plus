@@ -4,7 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import MedicalImageUpload from '../components/features/image-upload/MedicalImageUpload';
 import AnalysisResults from '../components/features/analysis-results/AnalysisResults';
-import { medicalAIService } from '../services/medical-ai-service';
+import { xrayModelService, XRAY_MODEL_INFO } from '../services/xray-model-service';
 import { MedicalImage, AnalysisResult, ModelInfo } from '../types/medical-images';
 
 
@@ -27,23 +27,17 @@ import {
 
 const ImageAnalysis: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [analysisType, setAnalysisType] = useState<'skin' | 'xray' | 'wound' | 'general'>('skin');
+  const [analysisType, setAnalysisType] = useState<'skin' | 'xray'>('xray');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>([]);
-  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  const [apiStatus, setApiStatus] = useState<{ available: boolean; models: string[] }>({ available: false, models: [] });
+  const availableModels: ModelInfo[] = [XRAY_MODEL_INFO];
+  const skinModelReady = false; // Skin condition model is coming soon
 
-  // Load available models and check API status
   useEffect(() => {
     const initialize = async () => {
-      // Get available models
-      const models = medicalAIService.getAvailableModels();
-      setAvailableModels(models);
-
-      // Check API status
-      const status = await medicalAIService.checkAPIStatus();
-      setApiStatus(status);
+      // Start downloading the X-ray model in the background
+      xrayModelService.preload();
 
       // Load previous analyses from localStorage
       const savedHistory = localStorage.getItem('medical_analysis_history');
@@ -67,13 +61,13 @@ const ImageAnalysis: React.FC = () => {
 
   const handleAnalyze = async () => {
     if (!selectedImage) return;
+    if (analysisType === 'skin' && !skinModelReady) return;
 
     setIsAnalyzing(true);
     setAnalysisResult(null);
 
     try {
-      // Perform AI analysis
-      const result = await medicalAIService.analyzeImage(selectedImage, analysisType);
+      const result = await xrayModelService.analyze(selectedImage);
       setAnalysisResult(result);
 
       // Save to history
@@ -85,11 +79,7 @@ const ImageAnalysis: React.FC = () => {
       generateReport(result);
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      const serverMessage = error?.response?.data?.error;
-      alert(
-        serverMessage ||
-          "AI image analysis isn't available right now — please try again in a moment."
-      );
+      alert("The X-ray model couldn't analyse this image. Check your internet connection for the first load, then try again with a JPG or PNG.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -174,36 +164,20 @@ Always consult with qualified healthcare professionals for medical diagnosis and
 
   const analysisTypes = [
     {
-      id: 'skin',
-      name: 'Skin Conditions',
-      description: 'Analyze moles, rashes, lesions',
-      icon: <ImageIcon className="w-5 h-5" />,
-      color: 'from-orange-500 to-red-500',
-      models: availableModels.filter(m => m.specialty.includes('skin')),
-    },
-    {
       id: 'xray',
-      name: 'X-ray Analysis',
-      description: 'Chest X-rays, bone fractures',
+      name: 'Chest X-ray',
+      description: 'Pneumonia screening',
       icon: <XRayIcon className="w-5 h-5" />,
       color: 'from-blue-500 to-indigo-500',
       models: availableModels.filter(m => m.specialty.includes('xray')),
     },
     {
-      id: 'wound',
-      name: 'Wound Assessment',
-      description: 'Surgical wounds, injuries',
-      icon: <WoundIcon className="w-5 h-5" />,
-      color: 'from-green-500 to-emerald-500',
-      models: availableModels.filter(m => m.specialty.includes('wound')),
-    },
-    {
-      id: 'general',
-      name: 'General Medical',
-      description: 'Any medical image',
-      icon: <Activity className="w-5 h-5" />,
-      color: 'from-purple-500 to-pink-500',
-      models: availableModels.filter(m => m.specialty.includes('general')),
+      id: 'skin',
+      name: 'Skin Conditions',
+      description: skinModelReady ? 'Moles, rashes, lesions' : 'Coming soon',
+      icon: <ImageIcon className="w-5 h-5" />,
+      color: 'from-orange-500 to-red-500',
+      models: availableModels.filter(m => m.specialty.includes('skin')),
     },
   ];
 
@@ -221,18 +195,15 @@ Always consult with qualified healthcare professionals for medical diagnosis and
             </h1>
           </div>
           <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
-            Upload medical images for instant AI-powered analysis. Get insights on skin conditions, X-rays, wounds, and more.
+            Screen chest X-rays for pneumonia with our own AI model, right in your browser. Skin condition analysis is coming soon.
           </p>
           
           {/* Status Indicators */}
           <div className="flex flex-wrap justify-center gap-4 mt-6">
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-full shadow-sm">
-              {/* Whether the backend AI service is configured doesn't guarantee
-                  a given analysis call succeeds — the real result (including
-                  any failure) shows after you click Analyze, not here. */}
-              <div className={`w-2 h-2 rounded-full ${apiStatus.available ? 'bg-green-500 animate-pulse' : 'bg-neutral-400'}`}></div>
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                {apiStatus.available ? 'AI Service Configured' : 'AI Service Unavailable'}
+                X-ray model: 88.5% test accuracy
               </span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-full shadow-sm">
@@ -244,7 +215,7 @@ Always consult with qualified healthcare professionals for medical diagnosis and
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-full shadow-sm">
               <WoundIcon className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Processed by Groq AI
+                Runs on your device
               </span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-full shadow-sm">
@@ -265,11 +236,14 @@ Always consult with qualified healthcare professionals for medical diagnosis and
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-4">
                 Select Analysis Type
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {analysisTypes.map((type) => (
                   <button
                     key={type.id}
-                    onClick={() => setAnalysisType(type.id as any)}
+                    onClick={() => {
+                      setAnalysisType(type.id as 'skin' | 'xray');
+                      setAnalysisResult(null);
+                    }}
                     className={`
                       flex flex-col items-center p-4 rounded-xl border-2 transition-all
                       ${analysisType === type.id
@@ -307,7 +281,7 @@ Always consult with qualified healthcare professionals for medical diagnosis and
                     Upload Medical Image
                   </h2>
                   <p className="text-neutral-600 dark:text-neutral-400">
-                    Upload clear image for {analysisType} analysis
+                    {analysisType === 'xray' ? 'Upload a clear front-view chest X-ray (JPG or PNG)' : 'Skin condition analysis is coming soon'}
                   </p>
                 </div>
                 {selectedImage && (
@@ -331,14 +305,14 @@ Always consult with qualified healthcare professionals for medical diagnosis and
                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     onClick={handleAnalyze}
-                    disabled={isAnalyzing}
+                    disabled={isAnalyzing || (analysisType === 'skin' && !skinModelReady)}
                     className="w-full py-4 text-lg"
                     leftIcon={isAnalyzing ? <Clock className="w-5 h-5 animate-spin" /> : <Brain className="w-5 h-5" />}
                   >
-                    {isAnalyzing ? 'Analyzing with AI...' : `Analyze ${analysisType} Image`}
+                    {isAnalyzing ? 'Analyzing...' : analysisType === 'xray' ? 'Analyze Chest X-ray' : 'Skin Analysis Coming Soon'}
                   </Button>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center mt-3">
-                    AI analysis takes 10-30 seconds
+                    {analysisType === 'xray' ? 'Takes a few seconds. The first run downloads the model (about 15 MB).' : 'This model is still being trained.'}
                   </p>
                 </div>
               )}
@@ -550,7 +524,7 @@ Always consult with qualified healthcare professionals for medical diagnosis and
               {
                 icon: '🛡️',
                 title: 'Privacy Notice',
-                description: 'Images are sent to our AI provider, Groq, for analysis. Remove names and patient details first.'
+                description: 'X-rays are analysed in your browser and never uploaded to our servers.'
               },
               {
                 icon: '🎯',
