@@ -1,0 +1,502 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* Medical-Grade Design System */
+        --navy-deep: #0B1C2D;
+        --cyan-clinical: #00C2CB;
+        --red-alert: #D72638;
+        --orange-emergency: #FF7A00;
+        --green-stable: #10B981;
+        --yellow-warning: #F59E0B;
+
+        /* Color Tokens */
+        --color-background-primary: #ffffff;
+        --color-background-secondary: #f8fafc;
+        --color-border-light: #e2e8f0;
+        --color-text-primary: #0f172a;
+        --color-text-secondary: #475569;
+
+        /* Clinical Status Colors */
+        --clinical-critical: #D72638;
+        --clinical-high: #ea580c;
+        --clinical-moderate: #d97706;
+        --clinical-low: #65a30d;
+        --clinical-normal: #16a34a;
+
+        /* Border Radius Tokens */
+        --radius-clinical: 4px;
+        --radius-patient: 8px;
+        --radius-panel: 12px;
+        --radius-modal: 16px;
+
+        /* Typography */
+        --font-heading: 'Playfair Display', serif;
+        --font-body: 'IBM Plex Sans', sans-serif;
+
+        /* Additional Tokens */
+        --primary-color: #00C2CB;
+        --accent-teal: #00C2CB;
+        --accent-blue: #0ea5e9;
+    }
+
+    .dark {
+        --color-background-primary: #0B1C2D;
+        --color-background-secondary: #122838;
+        --color-border-light: #1e3a52;
+        --color-text-primary: #f1f5f9;
+        --color-text-secondary: #94a3b8;
+    }
+
+    body {
+        @apply bg-background-primary text-text-primary font-sans antialiased;
+        font-family: var(--font-body), system-ui, sans-serif;
+    }
+}
+
+@layer components {
+
+    /* Container Utilities */
+    .container-narrow {
+        @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+    }
+
+    .container-wide {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    }
+
+    /* Card Components */
+    .glass-card {
+        @apply backdrop-blur-md bg-white/70 dark:bg-neutral-800/70 border border-white/20 dark:border-neutral-700/50 rounded-xl;
+    }
+
+    .medical-card {
+        @apply bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700;
+    }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes blob {
+    0% {
+        transform: translate(0px, 0px) scale(1);
+    }
+
+    33% {
+        transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+        transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+        transform: translate(0px, 0px) scale(1);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(20, 20);
+        opacity: 0;
+    }
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes pulseSubtle {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes modalEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes modalExit {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Animation Utilities */
+.animate-blob {
+    animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+    animation-delay: 4s;
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.pulse-subtle {
+    animation: pulseSubtle 2s infinite;
+}
+
+/* Modal Transitions */
+.modal-enter {
+    animation: modalEnter 300ms ease-out;
+}
+
+.modal-exit {
+    animation: modalExit 300ms ease-out;
+}
+
+/* Hover Effects */
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Glass Morphism Enhancements */
+.glass-card {
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background-color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.glass-panel {
+    @apply backdrop-blur-md bg-white/80 dark:bg-neutral-900/80 border border-white/20 dark:border-neutral-800/50;
+}
+
+.dark .glass-card {
+    background-color: rgba(30, 41, 59, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Leaflet Map Styles */
+.leaflet-popup-content {
+    font-size: 14px;
+}
+
+.leaflet-control-attribution {
+    font-size: 11px;
+}
+
+/* Gradient Effects */
+.gradient-border {
+    position: relative;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    bottom: -1px;
+    left: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-teal));
+    opacity: 0.3;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Button Effects */
+.btn-premium {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.btn-premium::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+.btn-premium:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+/* Text Utilities */
+.clinical-heading {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+}
+
+.clinical-subtle {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Spacing Utilities */
+.space-y-section>*+* {
+    margin-top: 3rem;
+}
+
+.space-y-subsection>*+* {
+    margin-top: 1.5rem;
+}
+
+/* Shadow Utilities */
+.medical-shadow-sm {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.medical-shadow-md {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.medical-shadow-lg {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Loading States */
+.image-loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+.dark .image-loading {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+/* ===== CUSTOM SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-neutral-100 dark:bg-neutral-800;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 dark:bg-neutral-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-400 dark:bg-neutral-500;
+}
+
+/* ===== CLINICAL STATUS BADGES ===== */
+.badge-critical {
+    background-color: var(--clinical-critical);
+    color: white;
+}
+
+.badge-high {
+    background-color: var(--clinical-high);
+    color: white;
+}
+
+.badge-moderate {
+    background-color: var(--clinical-moderate);
+    color: white;
+}
+
+.badge-low {
+    background-color: var(--clinical-low);
+    color: white;
+}
+
+.badge-normal {
+    background-color: var(--clinical-normal);
+    color: white;
+}
+
+/* ===== RESPONSIVE UTILITIES ===== */
+@media (max-width: 640px) {
+    .mobile-stack {
+        flex-direction: column !important;
+    }
+
+    .mobile-full {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .tablet-hide {
+        display: none !important;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+.focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+    }
+
+    .glass-card {
+        background: white !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: none !important;
+    }
+}
+
+/* ===== LEAFLET MAP STYLES ===== */
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    font-family: inherit;
+}
+/* Alert Animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

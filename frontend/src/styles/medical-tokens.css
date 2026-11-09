@@ -1,0 +1,70 @@
+/* Healthcare-Specific Design Tokens */
+
+/* Clinical Severity Colors (FDA Guidance Compliant) */
+:root {
+    --clinical-critical: #dc2626;    /* Critical findings */
+    --clinical-high: #ea580c;        /* High severity */
+    --clinical-moderate: #d97706;    /* Moderate findings */
+    --clinical-low: #65a30d;         /* Low severity/normal */
+    --clinical-normal: #16a34a;      /* Normal range */
+    
+    /* Medical Status Colors */
+    --status-emergency: #dc2626;
+    --status-warning: #d97706;
+    --status-stable: #16a34a;
+    --status-pending: #4f46e5;
+    --status-resolved: #0284c7;
+    
+    /* Accessibility-Enhanced Contrast */
+    --contrast-text: #000000;
+    --contrast-background: #ffffff;
+    --contrast-border: #1e293b;
+    
+    /* Clinical Information Hierarchy */
+    --priority-1: #000000;    /* Life-critical info */
+    --priority-2: #1e293b;    /* Diagnostic results */
+    --priority-3: #475569;    /* Clinical notes */
+    --priority-4: #64748b;    /* Supporting info */
+    
+    /* Medical Grid System */
+    --grid-medical: 8px;      /* Base medical grid */
+    --grid-dense: 4px;        /* Dense layouts (tables) */
+    --grid-spacious: 16px;    /* Patient-facing areas */
+    
+    /* Medical Typography Scale */
+    --font-size-clinical: 16px;      /* Standard medical text */
+    --font-size-diagnostic: 14px;    /* Diagnostic results */
+    --font-size-patient: 18px;       /* Patient-facing text */
+    --font-size-critical: 20px;      /* Critical alerts */
+    
+    /* Medical Border Radius Scale */
+    --radius-clinical: 4px;          /* Data entry forms */
+    --radius-patient: 8px;           /* Patient-facing elements */
+    --radius-panel: 12px;            /* Diagnostic panels */
+    --radius-modal: 16px;            /* Medical alerts/modals */
+  }
+  
+  /* Clinical Readability Overrides */
+  .medical-text {
+    font-size: var(--font-size-clinical);
+    line-height: 1.6; /* Enhanced for medical content */
+    letter-spacing: 0.01em; /* Slight spacing for dyslexic users */
+  }
+  
+  /* High Contrast Mode Support */
+  @media (prefers-contrast: high) {
+    :root {
+      --contrast-text: #000000;
+      --contrast-background: #ffffff;
+      --contrast-border: #000000;
+    }
+  }
+  
+  /* Reduced Motion for Clinical Environments */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
