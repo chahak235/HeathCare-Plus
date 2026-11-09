@@ -1,0 +1,416 @@
+{
+  "navigation": {
+    "home": "Home",
+    "features": "Features",
+    "doctors": "Doctors",
+    "mapPrediction": "Map Prediction",
+    "about": "About",
+    "emergency": "Emergency",
+    "emergencyConfirm": "This will call emergency services (911). Use only for real medical emergencies. Proceed?",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "hi": "Hi",
+    "user": "User",
+    "logout": "Logout",
+    "loginDemo": "Login Demo",
+    "commandCenter": "Command Center"
+  },
+  "home": {
+    "hero": {
+      "trustedBy": "Trusted by 500+ Top Hospitals",
+      "titlePart1": "Your Health,",
+      "titlePart2": "Our Priority",
+      "subtitle": "AI-powered healthcare platform connecting you with trusted medical professionals. From instant consultations to advanced diagnostics, we're here for your health journey.",
+      "bookAppointment": "Book an Appointment",
+      "videoConsultation": "Video Consultation",
+      "stats": {
+        "aiSupport": "24/7 AI Support",
+        "doctors": "500+ Doctors",
+        "successRate": "98.2% Success Rate",
+        "responseTime": "2.4s Response Time"
+      },
+      "startJourney": "Start Your Health Journey",
+      "healthInsights": "Get personalized health insights in minutes",
+      "healthAssessment": "Health Assessment",
+      "assessmentDesc": "3 min questionnaire",
+      "chatAssistant": "Chat with AI Assistant",
+      "chatDesc": "24/7 available",
+      "findHospitals": "Find Nearby Hospitals",
+      "findDesc": "Emergency services"
+    },
+    "stats": {
+      "trustedPlatform": "Trusted Healthcare Platform",
+      "trustedSubtitle": "Real-time metrics demonstrating our commitment to your health",
+      "activeDoctors": "Active Doctors",
+      "verifiedPros": "Verified medical professionals",
+      "successRate": "Success Rate",
+      "patientSatisfaction": "Patient satisfaction",
+      "responseTime": "Avg. Response Time",
+      "aiSpeed": "AI processing speed",
+      "emergencyCases": "Emergency Cases",
+      "handledMonth": "Handled this month"
+    },
+    "features": {
+      "badge": "Advanced Capabilities",
+      "title": "Comprehensive Healthcare Solutions",
+      "subtitle": "Everything you need for complete healthcare management, powered by cutting-edge technology",
+      "aiDiag": "AI-Powered Diagnostics",
+      "aiDiagDesc": "Advanced medical imaging analysis with 96% clinical accuracy",
+      "voiceHealth": "Voice Health Analysis",
+      "voiceHealthDesc": "Analyze voice patterns for wellness insights and emotional state",
+      "realtimeAppt": "Real-time Appointment",
+      "realtimeApptDesc": "Instant booking with automatic calendar sync and reminders",
+      "emergencyResp": "Emergency Response",
+      "emergencyRespDesc": "24/7 emergency support with location-based services",
+      "learnMore": "Learn more",
+      "hipaa": "HIPAA Compliant",
+      "hipaaDesc": "Your data is always secure and private",
+      "support": "24/7 Support",
+      "supportDesc": "Always here when you need us",
+      "verified": "Verified Doctors",
+      "verifiedDesc": "All practitioners are board-certified"
+    },
+    "stories": {
+      "title": "Patient Success Stories",
+      "subtitle": "Real experiences from our community. Hear how compassionate care made a difference.",
+      "age": "Age",
+      "treatedBy": "Treated by:",
+      "autoRotates": "Auto-rotates every 5 seconds",
+      "paused": "(Paused on hover)"
+    },
+    "insights": {
+      "badge": "Latest Research & Insights",
+      "title": "Medical Insights & Health Blog",
+      "subtitle": "Evidence-based articles and expert advice for your health journey",
+      "readFull": "Read full article",
+      "viewAll": "View All {{count}} Articles",
+      "showFewer": "Show Fewer Articles",
+      "browseCategory": "Browse by Category",
+      "allCategories": "All categories",
+      "wellnessFocus": "Today's Wellness Focus",
+      "enableReminders": "Enable Daily Reminders",
+      "remindersEnabled": "Daily Reminders Enabled ✓",
+      "newsletterTitle": "Health Insights Newsletter",
+      "newsletterDesc": "Get weekly evidence-based health tips and research updates",
+      "subscribed": "You're subscribed! Look out for our next issue.",
+      "emailPlaceholder": "Your email address",
+      "subscribe": "Subscribe"
+    }
+  },
+  "featuresPage": {
+    "heroTitle": "Advanced Healthcare AI Platform",
+    "heroSubtitle": "Comprehensive suite of AI-powered tools designed for modern healthcare delivery, combining cutting-edge technology with clinical expertise.",
+    "scheduleDemo": "Schedule a Demo",
+    "viewDocs": "View Documentation",
+    "tryAnalysis": "Try AI Analysis",
+    "bannerTitle": "🚀 Try AI Image Analysis Now",
+    "bannerDesc": "Upload a medical image and see our AI in action. No login required.",
+    "coreTitle": "Core Features",
+    "coreSubtitle": "Each feature is designed to solve real healthcare challenges with AI-powered solutions.",
+    "comingSoon": "Coming Soon",
+    "tryNow": "Try Now",
+    "featuresList": {
+      "image": {
+        "title": "AI Image Analysis",
+        "desc": "Upload a photo or scan and get a general-purpose AI visual assessment — not a replacement for a radiologist or specialist.",
+        "h1": "Plain-language visual observations",
+        "h2": "Flags findings worth discussing with a doctor",
+        "h3": "Self-reported confidence per finding",
+        "h4": "Always paired with a \"confirm with a professional\" disclaimer"
+      },
+      "chat": {
+        "title": "Medical Chat Assistant",
+        "desc": "24/7 AI-powered medical guidance with symptom checking and evidence-based recommendations.",
+        "h1": "Natural language processing",
+        "h2": "HIPAA-compliant",
+        "h3": "Emergency triage",
+        "h4": "Multi-language support"
+      },
+      "voice": {
+        "title": "Voice-to-Text Medical Notes",
+        "desc": "Accurate speech recognition for clinical documentation with medical terminology support.",
+        "h1": "99% accuracy rate",
+        "h2": "Real-time transcription",
+        "h3": "Medical terminology",
+        "h4": "Integration with EHR"
+      },
+      "analytics": {
+        "title": "Clinical Analytics Dashboard",
+        "desc": "Real-time bed occupancy, doctor roster, and operational metrics for hospital accounts.",
+        "h1": "Live bed occupancy by specialty",
+        "h2": "Real doctor roster",
+        "h3": "Occupancy trend metrics"
+      },
+      "code": {
+        "title": "AI Medical Code Generator",
+        "desc": "Automatic ICD-10 and CPT code suggestions based on clinical notes and diagnoses.",
+        "h1": "ICD-10 automation",
+        "h2": "CPT code suggestions",
+        "h3": "Billing optimization",
+        "h4": "Compliance checking"
+      },
+      "security": {
+        "title": "Enterprise Security Suite",
+        "desc": "End-to-end encryption, access controls, and compliance tools for healthcare organizations.",
+        "h1": "Role-based access control",
+        "h2": "Audit trail logging",
+        "h3": "Password hashing (bcrypt)",
+        "h4": "HIPAA-aligned data handling"
+      },
+      "telemedicine": {
+        "title": "Telemedicine Platform",
+        "desc": "Secure video consultations, appointment scheduling, and virtual care delivery.",
+        "h1": "Google Meet video consultations",
+        "h2": "Doctor accepts before it's confirmed",
+        "h3": "Real-time slot availability"
+      },
+      "appointment": {
+        "title": "Smart Appointment System",
+        "desc": "Real-time doctor availability with a doctor-confirms booking flow.",
+        "h1": "Live open-slot scheduling",
+        "h2": "Doctor accept/decline requests",
+        "h3": "Status tracking for patients"
+      }
+    },
+    "infraTitle": "Infrastructure & Security",
+    "infraSubtitle": "Built on enterprise-grade infrastructure with healthcare-specific security measures.",
+    "infraList": {
+      "cloud": {
+        "title": "Cloud Infrastructure",
+        "desc": "Scalable and reliable cloud infrastructure with 99.9% uptime SLA."
+      },
+      "ai": {
+        "title": "AI Processing",
+        "desc": "GPU-accelerated AI inference for real-time medical analysis."
+      },
+      "data": {
+        "title": "Data Storage",
+        "desc": "Secure, encrypted storage with automatic backup and recovery."
+      },
+      "api": {
+        "title": "API Access",
+        "desc": "RESTful APIs for seamless integration with existing systems."
+      }
+    },
+    "ctaTitle": "Ready to Transform Healthcare?",
+    "ctaSubtitle": "Join leading healthcare providers who are using our AI platform to improve patient outcomes and operational efficiency.",
+    "getStarted": "Get Started Free",
+    "contactSales": "Contact Sales"
+  },
+  "aboutPage": {
+    "heroTitle": "Redefining Healthcare",
+    "heroTitleGradient": "with AI",
+    "heroSubtitle": "We're building the future of medical technology—where artificial intelligence enhances human expertise to deliver better patient outcomes.",
+    "globalImpact": "Global Impact Report",
+    "joinMission": "Join Our Mission",
+    "missionTitle": "Our Mission",
+    "missionDesc": "To empower healthcare professionals with AI tools that enhance diagnostic accuracy, improve patient outcomes, and make quality healthcare accessible globally.",
+    "missionQuote": "\"Technology should serve humanity, especially in healthcare.\"",
+    "visionTitle": "Our Vision",
+    "visionDesc": "A world where every medical decision is informed by the best available technology and every patient receives the highest standard of care, regardless of location or resources.",
+    "hospitals": "Hospitals",
+    "countries": "Countries",
+    "patients": "Patients",
+    "valuesTitle": "Our Values",
+    "values": {
+      "patient": {
+        "title": "Patient-Centered",
+        "desc": "Every feature is designed with patient outcomes as the primary focus."
+      },
+      "clinical": {
+        "title": "Clinical Excellence",
+        "desc": "Maintaining the highest standards of medical accuracy and reliability."
+      },
+      "transparency": {
+        "title": "Transparency",
+        "desc": "Clear explanations of AI decision-making processes for clinicians."
+      },
+      "collaboration": {
+        "title": "Collaboration",
+        "desc": "Fostering partnerships between AI and healthcare professionals."
+      }
+    },
+    "journeyTitle": "Our Journey",
+    "milestones": {
+      "m1": {
+        "event": "Company Founded",
+        "desc": "Started with a vision to transform healthcare with AI"
+      },
+      "m2": {
+        "event": "First Clinical Trial",
+        "desc": "Partnered with 3 major hospitals for validation"
+      },
+      "m3": {
+        "event": "Series A Funding",
+        "desc": "Raised $20M to expand research and development"
+      },
+      "m4": {
+        "event": "Platform Launch",
+        "desc": "Public launch of HealthCare+ with 5 core features"
+      },
+      "m5": {
+        "event": "Global Expansion",
+        "desc": "Expanding to 10+ countries worldwide"
+      }
+    },
+    "teamTitle": "Leadership Team",
+    "expertise": "Expertise:",
+    "team": {
+      "sarah": {
+        "role": "Chief Medical Officer",
+        "exp": "Cardiology, AI Ethics"
+      },
+      "michael": {
+        "role": "Head of AI Research",
+        "exp": "Machine Learning, Medical Imaging"
+      },
+      "james": {
+        "role": "Clinical Director",
+        "exp": "Oncology, Clinical Trials"
+      },
+      "emma": {
+        "role": "Head of Product",
+        "exp": "Healthcare Technology, UX Design"
+      },
+      "david": {
+        "role": "Chief Technology Officer",
+        "exp": "Cloud Infrastructure, Security"
+      },
+      "lisa": {
+        "role": "Head of Data Science",
+        "exp": "Predictive Analytics, NLP"
+      }
+    },
+    "awardsTitle": "Awards & Recognition",
+    "awards": {
+      "healthtech": {
+        "title": "Best HealthTech 2023",
+        "desc": "Digital Health Awards"
+      },
+      "hipaa": {
+        "title": "HIPAA Excellence",
+        "desc": "Security & Compliance"
+      },
+      "ai": {
+        "title": "AI Innovation",
+        "desc": "TechCrunch Disrupt"
+      },
+      "startup": {
+        "title": "Top Startup",
+        "desc": "Forbes 30 Under 30"
+      }
+    },
+    "ctaTitle": "Join Us in Transforming Healthcare",
+    "ctaDesc": "Whether you're a healthcare provider, researcher, or technologist, there's a place for you in our mission.",
+    "careers": "Career Opportunities",
+    "schedule": "Schedule a Meeting",
+    "partner": "Partner With Us"
+  },
+  "auth": {
+    "login": {
+      "secureLogin": "Secure Healthcare Login",
+      "welcomeBack": "Welcome Back",
+      "subtitle": "Sign in to access your health dashboard, appointments, and medical records",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "john@example.com",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot password?",
+      "rememberMe": "Remember me on this device",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "invalidCredentials": "Invalid email or password. Please try again.",
+      "whatYouCanAccess": "What You Can Access",
+      "healthDashboard": "Health Dashboard",
+      "healthDashboardDesc": "Track your health metrics, appointments, and medications",
+      "securePrivate": "Secure & Private",
+      "securePrivateDesc": "HIPAA-compliant encryption for all your medical data",
+      "securityFeatures": "Security Features",
+      "encryption": "Encryption",
+      "ready": "Ready",
+      "communityTrust": "Community Trust",
+      "activePatients": "Active Patients",
+      "uptime": "Uptime",
+      "emailRequired": "Email is required",
+      "invalidEmail": "Please enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 6 characters"
+    }
+  },
+  "doctors_page": {
+    "badge": "Our Medical Network",
+    "title1": "Find Trusted",
+    "title2": "Healthcare Providers",
+    "subtitle": "Connect with verified doctors, specialists, and healthcare professionals. All doctors are thoroughly vetted and rated by patients.",
+    "search_placeholder": "Search doctors, specialties, hospitals...",
+    "all_specialties": "All Specialties",
+    "highest_rated": "Highest Rated",
+    "most_experienced": "Most Experienced",
+    "lowest_fee": "Lowest Fee",
+    "online_only": "Online Consultations Only",
+    "emergency_available": "Emergency Available",
+    "doctors_found": "doctors found",
+    "loading": "Loading real doctors from database...",
+    "error_title": "Error loading doctors",
+    "no_doctors": "No doctors found",
+    "try_adjusting": "Try adjusting your search or filter criteria",
+    "verified_professional": "Verified Professional",
+    "qualifications": "Qualifications",
+    "experience_stats": "Experience & Stats",
+    "experience": "Experience",
+    "years": "years",
+    "success_rate": "Success Rate",
+    "response_time": "Response Time",
+    "hospital_availability": "Hospital & Availability",
+    "away": "away",
+    "consultation_options": "Consultation Options",
+    "video_consult": "Video Consult",
+    "in_person": "In-Person",
+    "emergency": "Emergency",
+    "languages": "Languages",
+    "consultation_fee": "Consultation Fee",
+    "book_appointment": "Book Appointment",
+    "call_clinic": "Call Clinic",
+    "about_dr": "About Dr. {{name}}",
+    "recent_review": "Recent Patient Review",
+    "verified_doctors": "Verified Doctors",
+    "patient_satisfaction": "Patient Satisfaction",
+    "emergency_support": "Emergency Support",
+    "specialties_covered": "Specialties Covered"
+  },
+  "footer": {
+    "description": "AI-powered healthcare platform designed for medical professionals, providing advanced diagnostic support and clinical decision tools.",
+    "featuresHeading": "Features",
+    "links": {
+      "imageAnalysis": "AI Image Analysis",
+      "chatAssistant": "Medical Chat Assistant",
+      "voiceToText": "Voice-to-Text Transcription",
+      "clinicalAnalytics": "Clinical Analytics"
+    },
+    "contactHeading": "Contact",
+    "contact": {
+      "address": "123 Medical Center Dr, Boston, MA"
+    },
+    "trustHeading": "Trust & Security",
+    "trust": {
+      "hipaa": "HIPAA Compliant",
+      "encryption": "End-to-End Encryption",
+      "privacy": "Patient Privacy First"
+    },
+    "bottom": {
+      "rights": "© {{year}} HealthCare+. All rights reserved.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service",
+      "cookiePolicy": "Cookie Policy"
+    }
+  },
+  "medicalDisclaimer": {
+    "criticalTitle": "Emergency Medical Notice",
+    "criticalDesc": "This is an AI-powered decision support tool only. For medical emergencies, call emergency services immediately. Always consult with qualified healthcare professionals for diagnosis and treatment.",
+    "defaultTitle": "Medical Disclaimer",
+    "defaultDesc": "This AI tool provides decision support only, not medical diagnosis. Always consult with healthcare professionals for medical decisions."
+  }
+}
