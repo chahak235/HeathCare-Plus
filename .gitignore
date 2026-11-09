@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+.env.local
+.DS_Store
+
+database.sqlite
+.antigravitycli/
+
+# Local-only
+Medintellect.git/
+__pycache__/
+*.pyc
+*.log
+*.pth
+.env.*.local
+
