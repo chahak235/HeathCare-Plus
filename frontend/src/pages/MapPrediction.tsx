@@ -1,596 +1,301 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Hospital } from '../types/healthcare';
-import L from 'leaflet';
-import IndianCitySelector from '../components/location/IndianCitySelector';
-import IndianHealthAPI, { IndianHospital } from '../services/indian-health-api';
-// Import the real IndianHealthAPI service
+import { Search, MapPin, Phone, Navigation, Globe, Loader2, LocateFixed, AlertCircle, Siren, ExternalLink, Filter } from 'lucide-react';
+import { Container } from '../components/layout/Container';
+import {
+  FoundHospital, Place, directionsUrl, googleMapsUrl, hospitalsInPlace, hospitalsNear, searchPlaces, withDistance,
+} from '../services/hospital-finder';
 
-// Custom hospital icon for Leaflet
-const hospitalIcon = L.divIcon({
-  html: `
-    <div style="
-      background-color: #DC2626;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 18px;
-      border: 3px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    ">
-      🏥
-    </div>
-  `,
-  className: 'hospital-marker',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-});
+const PAGE_SIZE = 30;
 
-interface IndianCity {
-  id: string;
-  name: string;
-  state: string;
-  latitude: number;
-  longitude: number;
-}
-
-const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
+const FitBounds: React.FC<{ points: [number, number][]; focus: [number, number] | null }> = ({ points, focus }) => {
   const map = useMap();
   useEffect(() => {
-    if (center) {
-      map.flyTo(center, 12, { animate: true, duration: 1.5 });
+    if (focus) {
+      map.flyTo(focus, Math.max(map.getZoom(), 15), { duration: 0.8 });
     }
-  }, [center, map]);
+  }, [focus, map]);
+  useEffect(() => {
+    if (points.length === 0) return;
+    if (points.length === 1) map.setView(points[0], 14);
+    else map.fitBounds(points, { padding: [30, 30], maxZoom: 15 });
+  }, [points, map]);
   return null;
 };
 
 const MapPrediction: React.FC = () => {
-  // No hardcoded default city — we start with nothing selected and try the
-  // user's real location first. A manually picked city overrides that.
-  const [selectedCity, setSelectedCity] = useState<IndianCity | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locating, setLocating] = useState<boolean>(true);
-  const [locationDenied, setLocationDenied] = useState<boolean>(false);
-
-  const [hospitals, setHospitals] = useState<IndianHospital[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [place, setPlace] = useState<Place | null>(null);
+  const [hospitals, setHospitals] = useState<FoundHospital[]>([]);
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedHospital, setSelectedHospital] = useState<IndianHospital | null>(null);
+  const [filter, setFilter] = useState('');
+  const [emergencyOnly, setEmergencyOnly] = useState(false);
+  const [withPhoneOnly, setWithPhoneOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [focus, setFocus] = useState<[number, number] | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // On mount, try to use the browser's real geolocation instead of defaulting
-  // to any particular city.
-  useEffect(() => {
+  const load = async (label: string, run: (signal: AbortSignal) => Promise<FoundHospital[]>) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(label);
+    setError(null);
+    setHospitals([]);
+    setPage(1);
+    setSelectedId(null);
+    try {
+      let list = await run(controller.signal);
+      if (userPos) list = withDistance(list, userPos.lat, userPos.lng);
+      list.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0) || a.name.localeCompare(b.name));
+      setHospitals(list);
+      if (list.length === 0) setError('No hospitals are mapped in this area yet. Try a larger area or a nearby city.');
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') setError('The hospital map service is busy. Please try again in a few seconds.');
+    } finally {
+      if (abortRef.current === controller) setLoading(null);
+    }
+  };
+
+  const useMyLocation = () => {
     if (!navigator.geolocation) {
-      setLocating(false);
-      setLocationDenied(true);
+      setError('Your browser does not support location.');
       return;
     }
+    setLoading('Finding your location…');
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setLocating(false);
+      (pos) => {
+        const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserPos(p);
+        setPlace(null);
+        load('Finding hospitals near you…', (signal) => hospitalsNear(p.lat, p.lng, 15, signal));
       },
       () => {
-        setLocationDenied(true);
-        setLocating(false);
+        setLoading(null);
+        setError('Location access was blocked. Search for your city or state instead.');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  }, []);
-
-  // Fetch real Indian hospitals near the user's actual location, or near a
-  // manually picked city if they chose one instead.
-  useEffect(() => {
-    const fetchHospitals = async () => {
-      if (!selectedCity && !userLocation) return;
-
-      setLoading(true);
-      setError(null);
-      try {
-        let realHospitals = selectedCity
-          ? await IndianHealthAPI.getHospitalsByCity(selectedCity.name)
-          : await IndianHealthAPI.getHospitalsNearby(userLocation!.lat, userLocation!.lng);
-
-        if (realHospitals.length === 0) {
-          // Fallback to mock data if the database isn't seeded for this city/location
-          const centerLat = selectedCity ? selectedCity.latitude : userLocation!.lat;
-          const centerLng = selectedCity ? selectedCity.longitude : userLocation!.lng;
-          const cityName = selectedCity ? selectedCity.name : "Local";
-          
-          realHospitals = [
-            {
-              id: 9991,
-              name: `${cityName} City Hospital`,
-              type: 'government',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat + 0.012,
-              longitude: centerLng + 0.015,
-              lat: centerLat + 0.012,
-              lng: centerLng + 0.015,
-              phone: '9876543210',
-              emergency_phone: '108',
-              specialty: 'General Medicine, Emergency',
-              beds: 250,
-              ayushman_empaneled: true,
-              distance_km: 1.5
-            },
-            {
-              id: 9992,
-              name: 'Apollo Super Specialty',
-              type: 'private',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat - 0.015,
-              longitude: centerLng + 0.025,
-              lat: centerLat - 0.015,
-              lng: centerLng + 0.025,
-              phone: '9876543211',
-              emergency_phone: '108',
-              specialty: 'Cardiology, Neurology, Oncology',
-              beds: 400,
-              ayushman_empaneled: false,
-              distance_km: 2.8
-            },
-            {
-              id: 9993,
-              name: 'LifeCare Multi-specialty',
-              type: 'private',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat + 0.02,
-              longitude: centerLng - 0.01,
-              lat: centerLat + 0.02,
-              lng: centerLng - 0.01,
-              phone: '9876543212',
-              emergency_phone: '108',
-              specialty: 'Orthopedics, Pediatrics',
-              beds: 120,
-              ayushman_empaneled: true,
-              distance_km: 3.2
-            },
-            {
-              id: 9994,
-              name: 'Fortis Healthcare Institute',
-              type: 'private',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat - 0.005,
-              longitude: centerLng - 0.02,
-              lat: centerLat - 0.005,
-              lng: centerLng - 0.02,
-              phone: '9876543213',
-              emergency_phone: '108',
-              specialty: 'Gastroenterology, Transplant',
-              beds: 180,
-              ayushman_empaneled: false,
-              distance_km: 1.1
-            },
-            {
-              id: 9995,
-              name: `${cityName} Municipal Dispensary`,
-              type: 'government',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat + 0.008,
-              longitude: centerLng - 0.015,
-              lat: centerLat + 0.008,
-              lng: centerLng - 0.015,
-              phone: '9876543214',
-              emergency_phone: '108',
-              specialty: 'Primary Care, Vaccinations',
-              beds: 25,
-              ayushman_empaneled: true,
-              distance_km: 0.9
-            },
-            {
-              id: 9996,
-              name: 'Sunrise Women & Child Care',
-              type: 'private',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat - 0.012,
-              longitude: centerLng + 0.005,
-              lat: centerLat - 0.012,
-              lng: centerLng + 0.005,
-              phone: '9876543215',
-              emergency_phone: '108',
-              specialty: 'Maternity, Pediatrics, Gynecology',
-              beds: 85,
-              ayushman_empaneled: false,
-              distance_km: 1.4
-            },
-            {
-              id: 9997,
-              name: 'Global Vision Eye Hospital',
-              type: 'trust',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat + 0.025,
-              longitude: centerLng + 0.005,
-              lat: centerLat + 0.025,
-              lng: centerLng + 0.005,
-              phone: '9876543216',
-              emergency_phone: '108',
-              specialty: 'Ophthalmology, Lasik',
-              beds: 40,
-              ayushman_empaneled: true,
-              distance_km: 2.1
-            },
-            {
-              id: 9998,
-              name: `${cityName} Ortho & Trauma Centre`,
-              type: 'private',
-              city: cityName,
-              state: selectedCity ? selectedCity.state : 'State',
-              pincode: '000000',
-              latitude: centerLat - 0.022,
-              longitude: centerLng - 0.012,
-              lat: centerLat - 0.022,
-              lng: centerLng - 0.012,
-              phone: '9876543217',
-              emergency_phone: '108',
-              specialty: 'Orthopedics, Traumatology, Rehab',
-              beds: 60,
-              ayushman_empaneled: true,
-              distance_km: 2.7
-            }
-          ] as any; // Cast to avoid strict type issues if interface changes
-        }
-
-        setHospitals(realHospitals);
-        setSelectedHospital(realHospitals.length > 0 ? realHospitals[0] : null);
-
-      } catch (err) {
-        setError('Failed to fetch hospitals. Please try again.');
-        console.error('Error fetching hospitals:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHospitals();
-  }, [selectedCity, userLocation]);
-
-  const handleCitySelect = (city: IndianCity) => {
-    // A manual city pick always takes priority over device location.
-    setUserLocation(null);
-    setSelectedCity(city);
   };
 
-  const mapCenter: [number, number] | null = selectedCity
-    ? [selectedCity.latitude, selectedCity.longitude]
-    : userLocation
-    ? [userLocation.lat, userLocation.lng]
-    : null;
+  // Start with hospitals near the user if they allow location
+  useEffect(() => {
+    useMyLocation();
+    return () => abortRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleGetDirections = (hospital: IndianHospital) => {
-    if (hospital.latitude && hospital.longitude) {
-      window.open(
-        `https://www.google.com/maps/dir/?api=1&destination=${hospital.latitude},${hospital.longitude}`,
-        '_blank'
-      );
+  const onSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    setError(null);
+    setLoading('Searching places…');
+    try {
+      const results = await searchPlaces(q);
+      setLoading(null);
+      if (results.length === 0) {
+        setError(`We couldn't find "${q}". Check the spelling or add the country, e.g. "Pune, India".`);
+        setSuggestions([]);
+      } else if (results.length === 1) {
+        choosePlace(results[0]);
+      } else {
+        setSuggestions(results);
+      }
+    } catch (err: any) {
+      setLoading(null);
+      setError(err?.message || 'Place search failed.');
     }
   };
 
-  const handleCallHospital = (phoneNumber: string) => {
-    window.location.href = `tel:${phoneNumber}`;
+  const choosePlace = (p: Place) => {
+    setSuggestions([]);
+    setPlace(p);
+    setQuery(p.name);
+    load(`Loading every hospital in ${p.name}… large states or countries can take up to a minute`, (signal) => hospitalsInPlace(p, signal));
   };
 
-  return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-primary-50/30 dark:from-[#0B1221] dark:via-[#0F172A] dark:to-[#1E293B] py-16">
-        {/* Animated background elements */}
-        <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-primary-100/40 to-transparent dark:from-primary-900/20 pointer-events-none z-0"></div>
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-400/20 dark:bg-primary-500/10 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-[100px] animate-blob z-0"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400/20 dark:bg-blue-500/10 rounded-full mix-blend-multiply dark:mix-blend-lighten filter blur-[100px] animate-blob animation-delay-2000 z-0"></div>
+  const filtered = useMemo(() => {
+    const f = filter.trim().toLowerCase();
+    return hospitals.filter(
+      (h) =>
+        (!emergencyOnly || h.emergency === true) &&
+        (!withPhoneOnly || !!h.phone) &&
+        (!f || h.name.toLowerCase().includes(f) || h.address.toLowerCase().includes(f) || (h.operator ?? '').toLowerCase().includes(f))
+    );
+  }, [hospitals, filter, emergencyOnly, withPhoneOnly]);
 
-      <div className="max-w-7xl mx-auto relative z-10 px-4">
-        <div className="mb-16 text-center fade-in-up">
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6">
-            Find Real
-            <span className="bg-gradient-to-r from-primary-600 to-blue-600 dark:from-primary-400 dark:to-blue-400 bg-clip-text text-transparent block mt-2 pb-2">Indian Hospitals</span>
-          </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto font-light leading-relaxed">
-            Search for hospitals across India with real contact information, directions, and instant booking availability.
+  const points = useMemo<[number, number][]>(() => hospitals.map((h) => [h.lat, h.lng]), [hospitals]);
+  const shown = filtered.slice(0, page * PAGE_SIZE);
+  const center: [number, number] = userPos ? [userPos.lat, userPos.lng] : [20.59, 78.96];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary-50/30 dark:from-[#0B1221] dark:via-[#0F172A] dark:to-[#1E293B] py-10">
+      <Container>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white">Find Hospitals Anywhere</h1>
+          <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+            Search any city, state or country to see every mapped hospital, with contacts and directions.
           </p>
         </div>
 
-        {/* City Selection */}
-        <div className="mb-8 text-center flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Select Your City in India</h2>
-          <IndianCitySelector
-            onCitySelect={handleCitySelect}
-            selectedCity={selectedCity}
-          />
-        </div>
-
-        {/* Location status */}
-        {locating && (
-          <div className="mb-6 flex justify-center items-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-700 dark:text-blue-300">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
-            Detecting your location…
-          </div>
-        )}
-        {!locating && locationDenied && !selectedCity && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 text-yellow-800 dark:text-yellow-200 rounded">
-            Couldn't access your location. Please select a city below to see hospitals near you.
-          </div>
-        )}
-
-        {/* Loading and Error States */}
-        {loading && (
-          <div className="flex justify-center items-center p-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
-            <span className="ml-3 text-gray-700 dark:text-gray-300">Loading real Indian hospitals...</span>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <span className="text-red-500 dark:text-red-400">⚠️</span>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-              </div>
+        <form onSubmit={onSearch} className="relative max-w-3xl mx-auto mb-6">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="e.g. Pune, Maharashtra, Kerala, London, Texas"
+                className="w-full pl-10 pr-3 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Search a city, state or country"
+              />
             </div>
+            <button type="submit" className="px-5 py-3 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700">Search</button>
+            <button type="button" onClick={useMyLocation} title="Hospitals near me" className="px-3 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-primary-600 hover:border-primary-500">
+              <LocateFixed className="w-5 h-5" />
+            </button>
+          </div>
+          {suggestions.length > 0 && (
+            <ul className="absolute z-[1000] mt-2 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden">
+              <li className="px-4 py-2 text-xs text-neutral-500">Which place did you mean?</li>
+              {suggestions.map((s) => (
+                <li key={`${s.osmType}-${s.osmId}`}>
+                  <button type="button" onClick={() => choosePlace(s)} className="w-full text-left px-4 py-2.5 hover:bg-primary-50 dark:hover:bg-neutral-800">
+                    <span className="font-medium text-neutral-900 dark:text-white">{s.name}</span>
+                    <span className="ml-2 text-xs uppercase text-primary-600">{s.type}</span>
+                    <span className="block text-xs text-neutral-500 truncate">{s.displayName}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
+
+        {(loading || error) && (
+          <div className={`max-w-3xl mx-auto mb-6 p-3 rounded-xl flex items-center gap-2 text-sm ${error ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300' : 'bg-primary-50 dark:bg-primary-900/20 text-primary-800 dark:text-primary-300'}`}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
+            {loading || error}
           </div>
         )}
 
-        {/* Map and Hospital List */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Map Container */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-[2rem] shadow-lg p-4 h-[500px]">
-              {!mapCenter ? (
-                <div className="h-full w-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-center px-6">
-                  {locating
-                    ? 'Detecting your location…'
-                    : 'Enable location access or select a city to see hospitals on the map.'}
-                </div>
-              ) : (
-              <MapContainer
-                center={mapCenter}
-                zoom={12}
-                className="h-full w-full rounded-lg"
-              >
-                <MapUpdater center={mapCenter} />
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-
-                {/* Mark selected city or the user's real location */}
-                <Marker
-                  position={mapCenter}
-                  icon={L.divIcon({
-                    html: `<div style="
-                      background-color: #3B82F6;
-                      width: 40px;
-                      height: 40px;
-                      border-radius: 50%;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      color: white;
-                      font-size: 20px;
-                      border: 3px solid white;
-                      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-                    ">📍</div>`,
-                    className: 'city-marker',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40],
-                  })}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 h-[460px] lg:h-[680px] rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-700 shadow-sm relative z-0">
+            <MapContainer center={center} zoom={5} preferCanvas style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <FitBounds points={points} focus={focus} />
+              {userPos && (
+                <CircleMarker center={[userPos.lat, userPos.lng]} radius={8} pathOptions={{ color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.9 }}>
+                  <Popup>You are here</Popup>
+                </CircleMarker>
+              )}
+              {filtered.map((h) => (
+                <CircleMarker
+                  key={h.id}
+                  center={[h.lat, h.lng]}
+                  radius={h.id === selectedId ? 10 : 6}
+                  pathOptions={{ color: '#fff', weight: 1.5, fillColor: h.emergency ? '#dc2626' : '#0284c7', fillOpacity: 0.9 }}
+                  eventHandlers={{ click: () => setSelectedId(h.id) }}
                 >
                   <Popup>
-                    <div className="font-semibold">
-                      {selectedCity ? `${selectedCity.name}, ${selectedCity.state}` : 'Your Location'}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {selectedCity ? 'Selected City' : 'Detected via device GPS'}
+                    <strong>{h.name}</strong>
+                    {h.address && <div>{h.address}</div>}
+                    {h.phone && <div><a href={`tel:${h.phone.split(';')[0].replace(/[^\d+]/g, '')}`}>{h.phone}</a></div>}
+                    <div style={{ marginTop: 6 }}>
+                      <a href={directionsUrl(h)} target="_blank" rel="noopener noreferrer">Directions in Google Maps</a>
                     </div>
                   </Popup>
-                </Marker>
-
-                {/* Real hospital markers */}
-                {hospitals.map((hospital) => (
-                  <Marker
-                    key={hospital.id}
-                    position={[hospital.lat, hospital.lng]}
-                    icon={hospitalIcon}
-                    eventHandlers={{
-                      click: () => setSelectedHospital(hospital),
-                    }}
-                  >
-                    <Popup>
-                      <div className="p-2">
-                        <h3 className="font-bold text-lg text-gray-900">{hospital.name}</h3>
-                        <p className="text-sm text-gray-600">{hospital.city}, {hospital.state}</p>
-                        <div className="mt-2 space-y-1">
-                          <div className="flex items-center text-sm">
-                            <span className="font-medium mr-2">Type:</span>
-                            <span className="text-gray-700">{hospital.type}</span>
-                          </div>
-                          {hospital.phone && (
-                            <div className="flex items-center text-sm">
-                              <span className="font-medium mr-2">Phone:</span>
-                              <a 
-                                href={`tel:${hospital.phone}`}
-                                className="text-blue-600 hover:text-blue-800 hover:underline"
-                              >
-                                {hospital.phone}
-                              </a>
-                            </div>
-                          )}
-                          {hospital.ayushmanBharat && (
-                            <div className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                              ✓ Ayushman Bharat
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-              )}
-            </div>
+                </CircleMarker>
+              ))}
+            </MapContainer>
           </div>
 
-          {/* Hospital Details Panel */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-[2rem] shadow-lg p-6 h-[500px] overflow-y-auto">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Hospitals {selectedCity ? `in ${selectedCity.name}` : 'Near You'}
-                <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
-                  ({hospitals.length} found)
-                </span>
-              </h2>
+          <div className="lg:col-span-2 flex flex-col h-[680px]">
+            <div className="mb-3">
+              <div className="flex items-baseline justify-between mb-2">
+                <h2 className="font-semibold text-neutral-900 dark:text-white">
+                  {place ? `Hospitals in ${place.name}` : userPos ? 'Hospitals near you (15 km)' : 'Hospitals'}
+                </h2>
+                <span className="text-sm text-neutral-500">{filtered.length} of {hospitals.length}</span>
+              </div>
+              <div className="relative mb-2">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  value={filter}
+                  onChange={(e) => { setFilter(e.target.value); setPage(1); }}
+                  placeholder="Filter by name, area or operator"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                />
+              </div>
+              <div className="flex gap-4 text-sm text-neutral-700 dark:text-neutral-300">
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={emergencyOnly} onChange={(e) => { setEmergencyOnly(e.target.checked); setPage(1); }} /> Emergency only</label>
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={withPhoneOnly} onChange={(e) => { setWithPhoneOnly(e.target.checked); setPage(1); }} /> Has phone number</label>
+              </div>
+            </div>
 
-              {hospitals.length === 0 && !loading ? (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">🏥</div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No hospitals found
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Try selecting a different city in India
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {hospitals.map((hospital) => (
-                    <div
-                      key={hospital.id}
-                      className={`p-5 rounded-2xl border cursor-pointer transition-all duration-300 ${
-                        selectedHospital?.id === hospital.id
-                          ? 'border-primary-500 bg-white/60 dark:bg-slate-800/80 shadow-md ring-2 ring-primary-500/20'
-                          : 'border-white/50 dark:border-slate-700/50 bg-white/20 dark:bg-slate-800/20 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:shadow-lg'
-                      }`}
-                      onClick={() => setSelectedHospital(hospital)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-gray-900 dark:text-white">{hospital.name}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{hospital.address}</p>
-                          
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-medium rounded-full">
-                              {hospital.type}
-                            </span>
-                            {hospital.ayushmanBharat && (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                Ayushman Bharat
-                              </span>
-                            )}
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                              Beds: {hospital.availableBeds || 'N/A'} available
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col gap-2">
-                          {hospital.phone && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCallHospital(hospital.phone);
-                              }}
-                              className="px-3 py-1 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center"
-                            >
-                              📞 Call
-                            </button>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleGetDirections(hospital);
-                            }}
-                            className="px-3 py-1 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center"
-                          >
-                            🗺️ Directions
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {hospital.phone && (
-                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                          <p className="text-sm dark:text-gray-300">
-                            <span className="font-medium">Contact:</span>{' '}
-                            <a 
-                              href={`tel:${hospital.phone}`}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
-                            >
-                              {hospital.phone}
-                            </a>
-                          </p>
-                        </div>
-                      )}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {shown.map((h) => (
+                <div
+                  key={h.id}
+                  className={`p-4 rounded-xl border bg-white dark:bg-neutral-900 transition-colors ${h.id === selectedId ? 'border-primary-500 ring-1 ring-primary-500' : 'border-neutral-200 dark:border-neutral-700'}`}
+                >
+                  <button type="button" onClick={() => { setSelectedId(h.id); setFocus([h.lat, h.lng]); }} className="text-left w-full">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-neutral-900 dark:text-white">{h.name}</h3>
+                      {h.distanceKm != null && <span className="text-xs text-neutral-500 whitespace-nowrap">{h.distanceKm} km</span>}
                     </div>
-                  ))}
+                    {h.address && <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400 flex gap-1.5"><MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />{h.address}</p>}
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                      {h.emergency && <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 flex items-center gap-1"><Siren className="w-3 h-3" />Emergency</span>}
+                      {h.beds && <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">{h.beds} beds</span>}
+                      {h.operator && <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">{h.operator}</span>}
+                      {h.openingHours && <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">{h.openingHours}</span>}
+                    </div>
+                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a href={directionsUrl(h)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-sm hover:bg-primary-700">
+                      <Navigation className="w-4 h-4" /> Directions
+                    </a>
+                    {h.phone && (
+                      <a href={`tel:${h.phone.split(';')[0].replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-600 text-sm text-neutral-800 dark:text-neutral-200">
+                        <Phone className="w-4 h-4" /> {h.phone.split(';')[0]}
+                      </a>
+                    )}
+                    <a href={googleMapsUrl(h)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-600 text-sm text-neutral-800 dark:text-neutral-200">
+                      <ExternalLink className="w-4 h-4" /> Google Maps
+                    </a>
+                    {h.website && (
+                      <a href={h.website.startsWith('http') ? h.website : `https://${h.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-600 text-sm text-neutral-800 dark:text-neutral-200">
+                        <Globe className="w-4 h-4" /> Website
+                      </a>
+                    )}
+                  </div>
                 </div>
+              ))}
+              {shown.length < filtered.length && (
+                <button type="button" onClick={() => setPage((p) => p + 1)} className="w-full py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-sm text-neutral-700 dark:text-neutral-300 hover:border-primary-500">
+                  Show more ({filtered.length - shown.length} left)
+                </button>
+              )}
+              {!loading && hospitals.length === 0 && !error && (
+                <p className="text-sm text-neutral-500 text-center py-10">Search a place or allow location to see hospitals.</p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Info Panel */}
-        <div className="mt-12 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl rounded-[2rem] p-8 border border-white/50 dark:border-slate-700/50 shadow-sm relative z-10">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-            About Real Indian Hospital Data
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-start">
-              <div className="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-lg mr-3">
-                <span className="text-blue-600 dark:text-blue-400">🏥</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white">Real Hospitals</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Showing actual hospitals from the Indian healthcare database
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="bg-green-100 dark:bg-green-900/40 p-2 rounded-lg mr-3">
-                <span className="text-green-600 dark:text-green-400">📍</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white">Accurate Locations</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Real addresses and coordinates for Indian hospitals
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="bg-purple-100 dark:bg-purple-900/40 p-2 rounded-lg mr-3">
-                <span className="text-purple-600 dark:text-purple-400">📞</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white">Verified Contacts</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Real phone numbers you can actually call
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400 text-center">
+          Hospital data from OpenStreetMap contributors. Some hospitals may be missing details. In an emergency in India, call 112.
+        </p>
+      </Container>
     </div>
   );
 };
