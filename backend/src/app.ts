@@ -1,0 +1,304 @@
+import 'reflect-metadata';
+import express, { Application, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import 'express-async-errors';
+import { StatusCodes } from 'http-status-codes';
+import swaggerUi from 'swagger-ui-express';
+import { rateLimit } from 'express-rate-limit';
+import { isProduction } from './config/environment';
+import { Server } from 'http';
+import { bedAllocationService, initializeWebSocket, socketService } from './websocket';    
+import notificationRoutes from './routes/notification.routes';    
+import { NotificationService } from './services/notification.service';
+import triageRoutes from './routes/triage.routes';
+import { initializeServices } from './services';
+import { AppDataSource } from './config/database.config';
+import { seedInitialData } from './config/seed';
+import aiRoutes from './routes/ai.routes';
+import appointmentRoutes from './routes/appointment.routes';
+import { AlertService } from './services/alert.service'; // ✅ ADD THIS
+
+console.log('1. Imports started...');
+console.log('1.5 Initializing database connection...');
+
+AppDataSource.initialize()
+  .then(async () => {
+    console.log('✅ Database connected successfully');
+    await seedInitialData();
+  })
+  .catch((error) => {
+    console.error('❌ Database connection failed:', error?.message || error);
+    console.error('   Full error:', error);
+    // Do NOT exit — keep the HTTP server alive so /health stays reachable
+    // and Render logs stop crash-looping. Routes that need the DB will
+    // fail individually instead of taking the whole process down.
+  });
+  
+import { AppError } from './utils/errors/AppError';
+console.log('2. AppError imported');
+
+import { errorHandler } from './middleware/errorHandler';
+console.log('3. errorHandler imported');
+
+import { auditLogger } from './middleware/audit/auditLogger';
+console.log('4. auditLogger imported');
+
+import { requestId } from './middleware/requestId';
+console.log('5. requestId ed');
+
+import { corsOptions } from './config/cors';
+console.log('6. corsOptions imported');
+
+import { swaggerSpec } from './config/swagger';
+console.log('7. swaggerSpec imported');
+
+import { apiMetrics } from './middleware/metrics';
+console.log('8. apiMetrics imported');
+
+// Import routes
+import authRoutes from './routes/auth.routes';
+console.log('9. authRoutes imported');
+
+import patientRoutes from './routes/patient.routes';
+console.log('10. patientRoutes imported');
+
+import imageRoutes from './routes/image.routes';
+console.log('11. imageRoutes imported');
+
+import analysisRoutes from './routes/analysis.routes';
+console.log('12. analysisRoutes imported');
+
+import chatRoutes from './routes/chat.routes';
+console.log('13. chatRoutes imported');
+
+import dashboardRoutes from './routes/dashboard.routes';
+console.log('14. dashboardRoutes imported');
+
+import allocationRoutes from './routes/allocation.routes';
+console.log('15. allocationRoutes imported');
+
+import bedsRoutes from './routes/beds.routes';
+import voiceRoutes from './routes/voice.routes';
+console.log('16. bedsRoutes imported');
+
+import patientApiRoutes from './routes/patient-api.routes';
+console.log('17. patientApiRoutes imported');
+
+import doctorsRoutes from './routes/doctors.routes';
+console.log('18. doctorsRoutes imported');
+
+import hospitalsRoutes from './routes/hospitals.routes';
+console.log('18.5. hospitalsRoutes imported');
+
+import googleAuthRoutes from './routes/google-auth.routes';
+console.log('18.6. googleAuthRoutes imported');
+
+import newsletterRoutes from './routes/newsletter.routes';
+console.log('18.7. newsletterRoutes imported');
+
+import hospitalAdminRoutes from './routes/hospitalAdmin.routes';
+console.log('18.8. hospitalAdminRoutes imported');
+
+console.log('✅ All imports successful');
+
+const app: Application = express();
+console.log('19. App created');
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+console.log('20. Helmet middleware added');
+
+// CORS configuration
+app.use(cors(corsOptions));
+console.log('21. CORS middleware added');
+
+// Rate limiting
+// 100 req/15min (the original value here) is far too tight for a real app
+// page: the homepage alone fires off requests for doctors, weather,
+// hospitals, insights, and appointments in parallel, and Command Center /
+// Doctors pages add more on top. A handful of reloads exhausted it during
+// testing and silently looked like "the data is broken" — this is what
+// actually caused doctors to stop showing up, not a data or code bug.
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: 'Too many requests from this IP, please try again in a few minutes.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+console.log('22. Rate limiting added');
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+console.log('23. Body parsing middleware added');
+
+// Compression
+app.use(compression() as any);
+console.log('24. Compression added');
+
+// Request logging
+app.use(morgan(isProduction ? 'combined' : 'dev'));
+console.log('25. Morgan logging added');
+
+// Request ID for tracing
+app.use(requestId);
+console.log('26. Request ID middleware added');
+
+// Audit logging for HIPAA compliance
+app.use(auditLogger);
+console.log('27. Audit logger added');
+
+// API Metrics
+app.use('/metrics', apiMetrics);
+console.log('28. API metrics added');
+
+// Health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+  res.status(StatusCodes.OK).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    version: process.env.npm_package_version,
+  });
+});
+console.log('29. Health check endpoint added');
+
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+console.log('30. Swagger docs added');
+
+// API Routes
+const apiPrefix = process.env.API_PREFIX || '/api';
+console.log(`31. Using API prefix: ${apiPrefix}`);
+
+app.use(`${apiPrefix}/auth`, authRoutes);
+console.log('32. Auth routes mounted');
+
+app.use(`${apiPrefix}/patients`, patientRoutes);
+console.log('33. Patient routes mounted');
+
+app.use(`${apiPrefix}/images`, imageRoutes);
+console.log('34. Image routes mounted');
+
+app.use(`${apiPrefix}/analysis`, analysisRoutes);
+console.log('35. Analysis routes mounted');
+
+app.use(`${apiPrefix}/chat`, chatRoutes);
+console.log('36. Chat routes mounted');
+
+app.use(`${apiPrefix}/dashboard`, dashboardRoutes);
+console.log('37. Dashboard routes mounted');
+
+app.use(`${apiPrefix}/allocation`, allocationRoutes);
+console.log('38. Allocation routes mounted');
+
+app.use(`${apiPrefix}/beds`, bedsRoutes);
+console.log('39. Beds routes mounted');
+
+app.use(`${apiPrefix}/patients-api`, patientApiRoutes);
+console.log('40. Patient API routes mounted');
+
+app.use(`${apiPrefix}/doctors`, doctorsRoutes);
+console.log('41. Doctors routes mounted');
+
+app.use(`${apiPrefix}/india/hospitals`, hospitalsRoutes);
+console.log('41.5. Hospitals routes mounted');
+
+app.use(`${apiPrefix}/newsletter`, newsletterRoutes);
+console.log('41.7. Newsletter routes mounted');
+
+app.use(`${apiPrefix}/hospitals`, hospitalAdminRoutes);
+console.log('41.8. Hospital admin routes mounted');
+
+app.use(`${apiPrefix}/auth/google`, googleAuthRoutes);
+console.log('41.6. Google auth routes mounted');
+
+app.use(`${apiPrefix}/notifications`, notificationRoutes);
+console.log('42. Notification routes mounted');
+
+app.use(`${apiPrefix}/voice`, voiceRoutes);
+console.log('43. Voice routes mounted');
+
+app.use(`${apiPrefix}/ai`, aiRoutes);
+console.log('44. AI routes mounted');
+
+app.use(`${apiPrefix}/triage`, triageRoutes);
+console.log('45. Triage routes mounted');
+
+app.use(`${apiPrefix}/appointments`, appointmentRoutes);
+console.log('46. Appointment routes mounted');
+
+// 404 handler
+app.use('*', (req: Request, res: Response, next: NextFunction) => {
+  next(new AppError(`Cannot find ${req.originalUrl} on this server!`, StatusCodes.NOT_FOUND));
+});
+console.log('47. 404 handler added');
+
+// Global error handler
+app.use(errorHandler);
+console.log('48. Error handler added');
+
+const PORT = process.env.PORT || 3001;
+console.log(`49. Attempting to start server on port ${PORT}...`);
+
+// Global variables for services
+export let alertService: AlertService;
+
+try {
+  const server = app.listen(PORT, () => {
+    // Initialize WebSocket and all services first
+    const { socketService, bedAllocationService } = initializeWebSocket(server);
+    
+    // Initialize notification service
+    const notificationService = new NotificationService(socketService);
+    
+    // ✅ Initialize Alert Service
+    alertService = new AlertService(socketService, notificationService);
+    console.log('✅ Alert Service initialized');
+    
+    // Then initialize other services with socketService
+    initializeServices(socketService);
+    
+    console.log(`50. ✅ Server successfully started on port ${PORT}`);
+    
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📝 Health check: http://localhost:${PORT}/health`);
+    console.log(`👤 Patien//localhost:${PORT}${apiPrefix}/patients`);
+    console.log(`🛏️ Allocation API: http://localhost:${PORT}${apiPrefix}/allocation`);
+    console.log(`👨‍⚕️ Doctors API: http://localhost:${PORT}${apiPrefix}/doctors`);
+    console.log(`🔔 Alert System: ACTIVE`);
+    console.log(`🔌 WebSocket: ws://localhost:${PORT}/socket.io`);
+  });
+
+  server.on('error', (error) => {
+    console.error('51. ❌ Server error:', error);
+  });
+
+} catch (error) {
+  console.error('52. ❌ Failed to start server:', error);
+}
+
+export default app;
+
+export { app, socketService, bedAllocationService };
