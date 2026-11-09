@@ -69,6 +69,46 @@ export class GroqService {
     return content;
   }
 
+  /** One-shot request that must return a JSON object. */
+  async completeJson<T = any>(system: string, user: string, maxTokens = 1200): Promise<T> {
+    if (!this.apiKey) throw new Error('GROQ_API_KEY not configured');
+    const response = await axios.post<{ choices?: { message?: { content?: string } }[] }>(
+      GROQ_API_URL,
+      {
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        temperature: 0.3,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' },
+      },
+      { headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' }, timeout: 45000 }
+    );
+    const content = response.data?.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response from Groq');
+    return JSON.parse(content) as T;
+  }
+
+  /** Speech to text with Groq Whisper. */
+  async transcribe(audio: Buffer, filename: string, mimeType: string): Promise<{ text: string; language?: string }> {
+    if (!this.apiKey) throw new Error('GROQ_API_KEY not configured');
+    const form = new FormData();
+    form.append('file', new Blob([new Uint8Array(audio)], { type: mimeType }), filename);
+    form.append('model', process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo');
+    form.append('response_format', 'verbose_json');
+    form.append('temperature', '0');
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`Transcription failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+    const data: any = await res.json();
+    return { text: (data.text || '').trim(), language: data.language };
+  }
+
   // Groq's multimodal models accept image content blocks on the same
   // chat-completions endpoint used for text. Llama 4 Scout, the previous
   // default, was shut down for free and developer tiers on 2026-07-17.
