@@ -113,6 +113,13 @@ class RealtimeService {
     return response.data;
   }
 
+  async getAvailability(doctorId: number, days = 90) {
+    const response = await axios.get(`${API_URL}/appointments/availability`, {
+      params: { doctorId, days }
+    });
+    return response.data;
+  }
+
   async getAvailableSlots(doctorId: number, date: string) {
     const response = await axios.get(`${API_URL}/appointments/slots`, {
       params: { doctorId, date }
