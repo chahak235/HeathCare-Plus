@@ -227,10 +227,13 @@ export const Doctors: React.FC = () => {
     return a.consultationFee - b.consultationFee;
   });
 
-  const handleBookAppointment = (doctorId: string) => {
+  const [bookingMode, setBookingMode] = useState<'online' | 'offline'>('offline');
+
+  const handleBookAppointment = (doctorId: string, mode: 'online' | 'offline' = 'offline') => {
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
       setSelectedDoctor(doctor);
+      setBookingMode(mode);
       setShowBookingModal(true);
     }
   };
@@ -482,12 +485,26 @@ export const Doctors: React.FC = () => {
                         <h4 className="text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-2">{t('doctors_page.consultation_options')}</h4>
                         <div className="flex flex-wrap gap-2">
                           {doctor.availability.online && (
-                            <Badge variant="outline" className="flex items-center">
-                              <Video className="w-3 h-3 mr-1" />{t('doctors_page.video_consult')}</Badge>
+                            <button
+                              type="button"
+                              onClick={() => handleBookAppointment(doctor.id, 'online')}
+                              title="Book an online video consultation"
+                              className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                            >
+                              <Badge variant="outline" className="flex items-center cursor-pointer hover:border-primary-500">
+                                <Video className="w-3 h-3 mr-1" />{t('doctors_page.video_consult')}</Badge>
+                            </button>
                           )}
                           {doctor.availability.inPerson && (
-                            <Badge variant="outline" className="flex items-center">
-                              <Users className="w-3 h-3 mr-1" />{t('doctors_page.in_person')}</Badge>
+                            <button
+                              type="button"
+                              onClick={() => handleBookAppointment(doctor.id, 'offline')}
+                              title="Book an in-clinic visit"
+                              className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                            >
+                              <Badge variant="outline" className="flex items-center cursor-pointer hover:border-primary-500">
+                                <Users className="w-3 h-3 mr-1" />{t('doctors_page.in_person')}</Badge>
+                            </button>
                           )}
                           {doctor.availability.emergency && (
                             <Badge variant="error" className="flex items-center">
@@ -629,6 +646,7 @@ export const Doctors: React.FC = () => {
           <AppointmentBookingModal
             isOpen={showBookingModal}
             selectedDoctor={selectedDoctor}
+            initialMode={bookingMode}
             onClose={() => {
               setShowBookingModal(false);
               setSelectedDoctor(null);

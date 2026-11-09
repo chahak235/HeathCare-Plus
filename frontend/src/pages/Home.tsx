@@ -104,6 +104,7 @@ export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [bookingMode, setBookingMode] = useState<'online' | 'offline'>('offline');
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [successStories] = useState(() => generateRandomStories());
   const [weatherData, setWeatherData] = useState<any>(null);
@@ -730,7 +731,7 @@ export const Home: React.FC = () => {
                 <Button
                   size="lg"
                   leftIcon={<Calendar className="w-5 h-5" />}
-                  onClick={() => setShowAppointmentModal(true)}
+                  onClick={() => { setBookingMode('offline'); setShowAppointmentModal(true); }}
                   className="bg-primary-600 hover:bg-primary-700 text-white shadow-[0_8px_30px_rgb(0,194,203,0.3)] dark:shadow-[0_8px_30px_rgb(0,194,203,0.2)] rounded-xl px-8 py-4 text-lg font-medium transition-all hover:-translate-y-1"
                 >
                   {t('home.hero.bookAppointment')}
@@ -740,7 +741,7 @@ export const Home: React.FC = () => {
                   size="lg"
                   leftIcon={<Video className="w-5 h-5" />}
                   className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 shadow-sm rounded-xl px-8 py-4 text-lg font-medium transition-all hover:-translate-y-1 text-slate-700 dark:text-slate-200"
-                  onClick={() => setShowAppointmentModal(true)}
+                  onClick={() => { setBookingMode('online'); setShowAppointmentModal(true); }}
                 >
                   {t('home.hero.videoConsultation')}
                 </Button>
@@ -1553,6 +1554,7 @@ export const Home: React.FC = () => {
       {/* Appointment Booking Modal */}
       <AppointmentBookingModal
         isOpen={showAppointmentModal}
+        initialMode={bookingMode}
         onClose={() => setShowAppointmentModal(false)}
       />
     </div>
