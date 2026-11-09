@@ -36,7 +36,7 @@ const navigationItems = [
     { nameKey: 'doctors', href: '/doctors', icon: Users },
     { nameKey: 'mapPrediction', href: '/map-prediction', icon: Map },
     { nameKey: 'about', href: '/about', icon: Info },
-    { nameKey: 'emergency', href: 'tel:911', icon: AlertTriangle, isExternal: true },
+    { nameKey: 'emergency', href: '/emergency', icon: AlertTriangle },
 ];
 
 export const Navigation: React.FC = () => {
@@ -102,14 +102,9 @@ export const Navigation: React.FC = () => {
         setIsMenuOpen(false);
     };
 
-    // Handle emergency call with confirmation
+    // Open the emergency page (SOS, nearest hospital, family alerts, call 112)
     const handleEmergencyCall = () => {
-        const confirmCall = window.confirm(
-            t('navigation.emergencyConfirm')
-        );
-        if (confirmCall) {
-            window.location.href = 'tel:911';
-        }
+        navigate('/emergency');
         setIsMenuOpen(false);
     };
 
