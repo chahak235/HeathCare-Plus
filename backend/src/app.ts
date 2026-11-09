@@ -19,6 +19,7 @@ import { AppDataSource } from './config/database.config';
 import { seedInitialData } from './config/seed';
 import aiRoutes from './routes/ai.routes';
 import appointmentRoutes from './routes/appointment.routes';
+import emergencyRoutes from './routes/emergency.routes';
 import { AlertService } from './services/alert.service'; // ✅ ADD THIS
 
 console.log('1. Imports started...');
@@ -248,6 +249,9 @@ console.log('45. Triage routes mounted');
 
 app.use(`${apiPrefix}/appointments`, appointmentRoutes);
 console.log('46. Appointment routes mounted');
+
+app.use(`${apiPrefix}/emergency`, emergencyRoutes);
+console.log('46.5 Emergency routes mounted');
 
 // 404 handler
 app.use('*', (req: Request, res: Response, next: NextFunction) => {
