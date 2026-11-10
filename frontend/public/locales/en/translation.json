@@ -65,12 +65,12 @@
       "emergencyResp": "Emergency Response",
       "emergencyRespDesc": "24/7 emergency support with location-based services",
       "learnMore": "Learn more",
-      "hipaa": "HIPAA Compliant",
-      "hipaaDesc": "Your data is always secure and private",
+      "hipaa": "Private by design",
+      "hipaaDesc": "Encrypted connections, and your records are visible only to you and your doctors",
       "support": "24/7 Support",
       "supportDesc": "Always here when you need us",
       "verified": "Verified Doctors",
-      "verifiedDesc": "All practitioners are board-certified"
+      "verifiedDesc": "Profiles show each doctor's qualifications and experience"
     },
     "stories": {
       "title": "Patient Success Stories",
@@ -124,7 +124,7 @@
         "title": "Medical Chat Assistant",
         "desc": "24/7 AI-powered medical guidance with symptom checking and evidence-based recommendations.",
         "h1": "Natural language processing",
-        "h2": "HIPAA-compliant",
+        "h2": "Private by design",
         "h3": "Emergency triage",
         "h4": "Multi-language support"
       },
@@ -157,7 +157,7 @@
         "h1": "Role-based access control",
         "h2": "Audit trail logging",
         "h3": "Password hashing (bcrypt)",
-        "h4": "HIPAA-aligned data handling"
+        "h4": "Encrypted connections (HTTPS)"
       },
       "telemedicine": {
         "title": "Telemedicine Platform",
@@ -327,7 +327,7 @@
       "healthDashboard": "Health Dashboard",
       "healthDashboardDesc": "Track your health metrics, appointments, and medications",
       "securePrivate": "Secure & Private",
-      "securePrivateDesc": "HIPAA-compliant encryption for all your medical data",
+      "securePrivateDesc": "Encrypted connections and login-protected medical records",
       "securityFeatures": "Security Features",
       "encryption": "Encryption",
       "ready": "Ready",
@@ -382,7 +382,7 @@
     "specialties_covered": "Specialties Covered"
   },
   "footer": {
-    "description": "AI-powered healthcare platform designed for medical professionals, providing advanced diagnostic support and clinical decision tools.",
+    "description": "Find doctors and hospitals, book in-clinic or video consultations, and get AI health information in one place.",
     "featuresHeading": "Features",
     "links": {
       "imageAnalysis": "AI Image Analysis",
@@ -392,13 +392,14 @@
     },
     "contactHeading": "Contact",
     "contact": {
-      "address": "123 Medical Center Dr, Boston, MA"
+      "address": "India",
+      "emergency": "Emergency: 112"
     },
     "trustHeading": "Trust & Security",
     "trust": {
-      "hipaa": "HIPAA Compliant",
-      "encryption": "End-to-End Encryption",
-      "privacy": "Patient Privacy First"
+      "hipaa": "Encrypted connections (HTTPS)",
+      "encryption": "X-ray analysis stays on your device",
+      "privacy": "We never sell your data"
     },
     "bottom": {
       "rights": "© {{year}} HealthCare+. All rights reserved.",

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Logo } from '../shared/Logo';
@@ -81,11 +82,11 @@ export const Footer: React.FC = () => {
             <ul className="space-y-3">
               <li className="flex items-center text-neutral-600 dark:text-neutral-400">
                 <Mail className="w-4 h-4 mr-3" />
-                support@healthcareplus.ai
+                <a href="mailto:healthcareplus.care@gmail.com" className="hover:text-primary-600">healthcareplus.care@gmail.com</a>
               </li>
               <li className="flex items-center text-neutral-600 dark:text-neutral-400">
                 <Phone className="w-4 h-4 mr-3" />
-                +1 (555) 123-4567
+                <a href="tel:112" className="hover:text-primary-600">{t('footer.contact.emergency', 'Emergency: 112')}</a>
               </li>
               <li className="flex items-center text-neutral-600 dark:text-neutral-400">
                 <MapPin className="w-4 h-4 mr-3" />
@@ -130,15 +131,12 @@ export const Footer: React.FC = () => {
               {t('footer.bottom.rights', { year: new Date().getFullYear() })}
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 transition-colors">
+              <Link to="/privacy" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 transition-colors">
                 {t('footer.bottom.privacyPolicy')}
-              </a>
-              <a href="#" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 transition-colors">
+              </Link>
+              <Link to="/terms" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 transition-colors">
                 {t('footer.bottom.termsOfService')}
-              </a>
-              <a href="#" className="text-sm text-neutral-600 hover:text-primary-600 dark:text-neutral-400 transition-colors">
-                {t('footer.bottom.cookiePolicy')}
-              </a>
+              </Link>
             </div>
           </div>
         </div>
