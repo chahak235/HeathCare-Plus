@@ -1,11 +1,14 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
+import { loginBlockedFor, normaliseEmail, passwordProblem, recordLoginFailure, recordLoginSuccess } from '../middleware/login-guard';
 
 const authService = new AuthService();
 
 export class AuthController {
   async signup(req: Request, res: Response) {
     try {
+      const problem = passwordProblem(req.body?.password);
+      if (problem) return res.status(400).json({ success: false, error: problem });
       const result = await authService.signup(req.body);
       
       if (!result.success) {
@@ -24,11 +27,24 @@ export class AuthController {
 
   async login(req: Request, res: Response) {
     try {
+      const email = normaliseEmail(req.body?.email);
+      const ip = req.ip || 'unknown';
+      const wait = loginBlockedFor(email, ip);
+      if (wait > 0) {
+        res.setHeader('Retry-After', String(Math.ceil(wait / 1000)));
+        return res.status(429).json({
+          success: false,
+          error: `Too many failed attempts. Try again in ${Math.ceil(wait / 60000)} minutes or reset your password.`,
+        });
+      }
+
       const result = await authService.login(req.body);
-      
+
       if (!result.success) {
+        recordLoginFailure(email, ip);
         return res.status(401).json(result);
       }
+      recordLoginSuccess(email);
 
       return res.json(result);
     } catch (error) {
