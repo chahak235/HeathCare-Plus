@@ -5,7 +5,7 @@ import type { Bed, BedUpdateEvent, OccupancyMetrics, SpecialtyOccupancy } from '
 import { useAuth } from './AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
 
 interface BedStatusContextValue {
   beds: Bed[];
