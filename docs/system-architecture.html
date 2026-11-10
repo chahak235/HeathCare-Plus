@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HealthCare+ Architecture</title>
+<style>
+  :root { --bg:#ffffff; --ink:#0f172a; }
+  html,body { margin:0; background:var(--bg); color:var(--ink); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .wrap { padding:16px; }
+  svg { width:100%; height:auto; display:block; max-width:1920px; margin:0 auto; border:1px solid #e2e8f0; border-radius:8px; }
+  .mono { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<svg id="d" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="HealthCare+ system architecture and data flow diagram"></svg>
+</div>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('d');
+const MONO = 'Consolas, "JetBrains Mono", "Courier New", monospace';
+const SANS = 'Inter, "Segoe UI", system-ui, sans-serif';
+
+function el(tag, attrs, parent = svg) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  parent.appendChild(e);
+  return e;
+}
+function txt(x, y, s, o = {}, parent = svg) {
+  const t = el('text', {
+    x, y, 'font-size': o.size || 10, 'font-family': o.mono ? MONO : SANS,
+    'font-weight': o.weight || 400, fill: o.fill || '#1e293b',
+    'text-anchor': o.anchor || 'start'
+  }, parent);
+  if (o.halo) { t.setAttribute('stroke', '#fff'); t.setAttribute('stroke-width', 3);
+    t.setAttribute('paint-order', 'stroke'); t.setAttribute('stroke-linejoin', 'round'); }
+  t.textContent = s;
+  return t;
+}
+
+/* ---------- colours per flow type ---------- */
+const FLOW = {
+  api:    { c: '#2563eb', label: 'Client → API (HTTPS REST/JSON, :3001/api)' },
+  local:  { c: '#0d9488', label: 'In-browser call (no network)' },
+  call:   { c: '#334155', label: 'Server-side call (route → service)' },
+  db:     { c: '#16a34a', label: 'Database (SQL over TLS :5432)' },
+  ai:     { c: '#7c3aed', label: 'Third-party API (Groq, OSM, CDN · HTTPS)' },
+  notify: { c: '#ea580c', label: 'To people/devices (invite, SMTP, tel:, links)' },
+  ws:     { c: '#2563eb', dash: '5 4', label: 'Realtime push (Socket.IO WebSocket)' },
+  deploy: { c: '#64748b', dash: '7 5', label: 'Build & deployment' },
+  error:  { c: '#dc2626', dash: '4 3', label: 'Error / fallback path' }
+};
+const defs = el('defs', {});
+for (const k in FLOW) {
+  const m = el('marker', { id: 'm-' + k, markerWidth: 8, markerHeight: 8, refX: 7.5, refY: 4,
+    orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+  el('path', { d: 'M0,0 L8,4 L0,8 z', fill: FLOW[k].c }, m);
+}
+
+/* ---------- building blocks ---------- */
+function zone(n, title, x, y, w, h, fill, stroke) {
+  el('rect', { x, y, width: w, height: h, rx: 14, fill, stroke, 'stroke-width': 1.6, 'stroke-dasharray': '8 5' });
+  txt(x + 12, y + 17, `${n}. ${title}`, { size: 13, weight: 700, fill: stroke });
+}
+function band(x, y, w, h, title, line, fill = '#ffffff', stroke = '#94a3b8') {
+  el('rect', { x, y, width: w, height: h, rx: 8, fill, stroke, 'stroke-width': 1 });
+  txt(x + 10, y + 16, title, { size: 10.5, weight: 700 });
+  txt(x + 10, y + 31, line, { size: 9.2, mono: true, fill: '#334155' });
+}
+function stage(x, y, s) { txt(x, y, s, { size: 9, weight: 700, fill: '#64748b' }); }
+
+const DIA = { g: '#16a34a', a: '#d97706', r: '#dc2626' };
+function card(o) {
+  const { x, y, w, h } = o;
+  el('rect', { x, y, width: w, height: h, rx: 8, fill: o.fill || '#ffffff',
+    stroke: o.stroke || '#cbd5e1', 'stroke-width': 1 });
+  el('circle', { cx: x + 15, cy: y + 16, r: 10.5, fill: o.ib || '#e2e8f0' });
+  txt(x + 15, y + 20, o.icon || '•', { size: o.iconSize || 11, anchor: 'middle', weight: 700, fill: o.ic || '#0f172a' });
+  txt(x + 31, y + 20, o.title, { size: 11.5, weight: 700, fill: '#0f172a' });
+  const files = [].concat(o.file || []);
+  files.forEach((f, i) => txt(x + 31, y + 33 + i * 11, f, { size: 9, mono: true, fill: '#475569' }));
+  let ly = y + 35 + files.length * 11;
+  for (const raw of (o.lines || [])) {
+    let s = raw, tx = x + 10, fill = '#1e293b';
+    const m = /^◇([gar]) /.exec(s);
+    if (m) {
+      const cx = x + 14, cy = ly - 3.5;
+      el('polygon', { points: `${cx},${cy - 5} ${cx + 5},${cy} ${cx},${cy + 5} ${cx - 5},${cy}`, fill: DIA[m[1]] });
+      s = s.slice(3); tx = x + 23; fill = DIA[m[1]];
+    }
+    txt(tx, ly, s, { size: 9.3, mono: !!o.mono, fill });
+    ly += 12;
+  }
+}
+function badge(x, y, n, c) {
+  const r = String(n).length > 1 ? 8.5 : 7.5;
+  el('circle', { cx: x, cy: y, r, fill: c, stroke: '#fff', 'stroke-width': 1.5 });
+  txt(x, y + 3.2, n, { size: String(n).length > 2 ? 7.2 : 8.6, weight: 700, fill: '#fff', anchor: 'middle' });
+}
+function arrow(pts, type, o = {}) {
+  const f = FLOW[type];
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
+  const a = { d, fill: 'none', stroke: f.c, 'stroke-width': 1.7, 'marker-end': `url(#m-${type})` };
+  if (f.dash) a['stroke-dasharray'] = f.dash;
+  el('path', a);
+  let ty = o.tp ? o.tp[1] : 0;
+  if (o.n) {
+    const s = o.seg || 0, p = pts[s], q = pts[s + 1];
+    const b = o.b || [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    badge(b[0], b[1], o.n, f.c);
+    // keep a label that sits above the badge clear of it
+    if (o.tp && Math.abs(o.tp[0] - b[0]) < 60 && ty < b[1] && ty > b[1] - 12) ty = b[1] - 12;
+  }
+  if (o.t) {
+    [].concat(o.t).forEach((line, i) =>
+      txt(o.tp[0], ty + i * 10, line, { size: 8.6, weight: 600, fill: f.c, anchor: o.anchor || 'middle', halo: true }));
+  }
+}
+
+/* ---------- canvas & title ---------- */
+el('rect', { x: 0, y: 0, width: 1920, height: 1080, fill: '#ffffff' });
+el('rect', { x: 0, y: 0, width: 1920, height: 56, fill: '#0f1e3d' });
+txt(24, 37, 'HealthCare+ — System Architecture & Data Flow Diagram', { size: 23, weight: 700, fill: '#ffffff' });
+txt(1896, 35, 'React 18 SPA · Express + TypeORM · Neon PostgreSQL · Groq AI · Google Calendar/Meet · ONNX model in the browser',
+  { size: 12, fill: '#cbd5e1', anchor: 'end' });
+
+/* ---------- zones ---------- */
+zone(1, 'Users & Devices', 15, 68, 215, 747, '#eff6ff', '#2563eb');
+zone(2, 'Frontend — React 18 + Vite SPA (TypeScript · Tailwind)', 245, 68, 455, 747, '#f5f3ff', '#7c3aed');
+zone(3, 'Backend API — Node 22 · Express 4 · TypeORM 0.3 (port 3001, prefix /api)', 745, 68, 665, 507, '#f0fdf4', '#16a34a');
+zone(4, 'Data Layer — Neon serverless PostgreSQL', 745, 585, 665, 130, '#f0fdfa', '#0d9488');
+zone(5, 'External Cloud Services', 1425, 68, 480, 747, '#fff7ed', '#ea580c');
+zone(6, 'Model Pipeline, Build & Deployment', 15, 828, 1890, 160, '#fef2f2', '#dc2626');
+
+/* ---------- 1. users & devices ---------- */
+card({ x: 25, y: 90, w: 195, h: 85, icon: '🌐', ib: '#dbeafe', title: 'Web browser', file: 'Chrome · Safari · mobile',
+  lines: ['Web Audio · Geolocation · WASM', 'MediaRecorder · localStorage', '② GET SPA bundle · HTTPS :443'] });
+card({ x: 25, y: 195, w: 195, h: 40, icon: '👤', ib: '#dbeafe', title: 'Patient', file: 'role = patient' });
+card({ x: 25, y: 242, w: 195, h: 40, icon: '🩺', ib: '#dbeafe', title: 'Doctor', file: 'role = doctor · sets days/hours' });
+card({ x: 25, y: 289, w: 195, h: 40, icon: '🏥', ib: '#dbeafe', title: 'Hospital admin', file: 'role = hospital · beds/doctors' });
+card({ x: 25, y: 440, w: 195, h: 90, icon: '📞', ib: '#ffedd5', title: 'Phone dialer / SMS app', file: 'tel: · sms: URI schemes',
+  lines: ['Call 112 (national emergency)', 'Call nearest / usual hospital', 'Text family contacts'] });
+card({ x: 25, y: 585, w: 195, h: 80, icon: '🗺', ib: '#ffedd5', title: 'Google Maps', file: ['google.com/maps/dir/?api=1', '&destination=lat,lng'],
+  lines: ['Directions in new tab / app'] });
+card({ x: 25, y: 690, w: 195, h: 70, icon: '☎', ib: '#fee2e2', title: 'Crisis helplines', file: 'shown in voice report',
+  lines: ['Tele-MANAS 14416', '1-800-891-4416 · 112'] });
+
+/* ---------- 2. frontend ---------- */
+band(255, 90, 435, 42, 'App shell — main.tsx → App.tsx (React Router 6)',
+  'AuthContext (JWT, localStorage) · RealtimeContext (socket.io-client)');
+stage(255, 141, 'STAGE 1 · PAGES (src/pages, src/components)');
+stage(490, 141, 'STAGE 2 · CLIENT SERVICES (src/services)');
+const FP = { x: 255, w: 200 }, FS = { x: 490, w: 200 };
+card({ ...FP, y: 145, h: 125, icon: '📅', ib: '#ede9fe', title: 'Booking modal', file: 'AppointmentBookingModal.tsx',
+  lines: ['+ BookingCalendar.tsx', 'Tabs: In-clinic | Online video', '"Video consult" → Online tab', 'Step 1 doctor → 2 date + slot', '→ 3 symptoms + confirm', 'Month grid · 90-day window'] });
+card({ ...FS, y: 145, h: 125, icon: 'TS', iconSize: 9, ib: '#dbeafe', title: 'Realtime API client', file: 'realtime.service.ts',
+  lines: ['getDoctors()', 'getAvailability(id, 90)', 'getSlots(id, date)', 'bookAppointment(payload)', 'axios · baseURL VITE_API_URL', '→ days with openSlots > 0'] });
+card({ ...FP, y: 280, h: 80, icon: '🎙', ib: '#ede9fe', title: 'Voice analyzer', file: 'home/VoiceAnalyzer.tsx',
+  lines: ['Record 10–120 s or upload', 'Report · scores · crisis box', 'Download report (.txt)'] });
+card({ ...FS, y: 280, h: 80, icon: 'TS', iconSize: 9, ib: '#dbeafe', title: 'Voice features', file: 'voice-features.ts',
+  lines: ['decodeAudio → RMS dB, pauses', 'pitch: autocorrelation (Hz)', '→ features JSON (10 fields)'] });
+card({ ...FP, y: 370, h: 64, icon: '💬', ib: '#ede9fe', title: 'AI chat', file: 'Chat.tsx · FloatingChatWidget',
+  lines: ['ChatContext keeps history', 'Badge: Processed by Groq AI'] });
+card({ ...FS, y: 370, h: 64, icon: 'TS', iconSize: 9, ib: '#dbeafe', title: 'Chat client', file: 'ollama-service.ts',
+  lines: ['POST /ai/chat · timeout 60 s', '◇r fail → labelled offline reply'] });
+card({ ...FP, y: 440, h: 125, icon: '🚨', ib: '#fee2e2', title: 'Emergency & profile', file: ['Emergency.tsx · Profile.tsx', 'HealthProfileForm · SignUp'],
+  lines: ['SOS: geolocate → nearest', 'Call 112 · call/text family', 'Profile: height, weight,', 'blood, conditions,', '≤ 5 family contacts'] });
+card({ ...FS, y: 440, h: 125, icon: 'TS', iconSize: 9, ib: '#dbeafe', title: 'Emergency client', file: 'emergency-service.ts',
+  lines: ['login() · register()', 'getProfile() · saveProfile()', 'sendAlert({lat,lng,hospital})', 'Bearer JWT (7 d) from', 'AuthContext / localStorage', '⑲ → hospitalsNear(8 km)'] });
+card({ ...FP, y: 585, h: 100, icon: '🗺', ib: '#ede9fe', title: 'Hospital finder page', file: 'MapPrediction.tsx',
+  lines: ['react-leaflet · preferCanvas', 'CircleMarkers · filters', '30 results / page', 'Directions · Call · Website'] });
+card({ ...FS, y: 585, h: 100, icon: 'TS', iconSize: 9, ib: '#dbeafe', title: 'Hospital search', file: 'hospital-finder.ts',
+  lines: ['searchPlaces → hospitalsInPlace', 'area = 3600000000 + osmId', '◇a mirror < 8 s? else hedge', 'timeout 100 s · memory cache'] });
+card({ ...FP, y: 695, h: 113, icon: '🩻', ib: '#ede9fe', title: 'Image analyzer', file: 'ImageAnalysis.tsx',
+  lines: ['Types: X-ray (live)', '      Skin (coming soon)', 'react-dropzone upload', 'Badge: runs on your device', 'Image never leaves browser'] });
+card({ ...FS, y: 695, h: 113, icon: '🧠', ib: '#dbeafe', title: 'X-ray model runner', file: 'xray-model-service.ts',
+  lines: ['resize 224×224 · ImageNet norm', 'ORT-web 1.31.1 WASM → logit', 'p = σ(logit) · ~3 s first run', '◇r p ≥ 0.62505 → Pneumonia', '◇g p < 0.62505 → Normal'] });
+
+/* ---------- 3. backend ---------- */
+band(755, 90, 645, 42, 'STAGE 1 · Middleware chain (src/app.ts)',
+  'helmet → cors → compression → morgan + auditLogger → rateLimit 1000 req/15 min → authenticate (JWT) · Socket.IO ws :3001');
+stage(765, 141, 'STAGE 2 · ROUTES (src/routes)');
+stage(1010, 141, 'STAGE 3 · SERVICES (src/services, src/utils)');
+const BR = { x: 765, w: 185 };
+card({ ...BR, y: 145, h: 125, icon: 'ex', iconSize: 9, ib: '#dcfce7', title: 'Appointments API', file: 'appointment.routes.ts', mono: true,
+  lines: ['+ doctors.routes.ts', 'GET  /doctors', 'GET  /appointments/', '     availability?days=90', 'GET  /appointments/slots', 'POST /appointments'] });
+card({ ...BR, y: 280, h: 80, icon: 'ex', iconSize: 9, ib: '#dcfce7', title: 'Voice API', file: 'voice.routes.ts',
+  lines: ['POST /voice/analyze ≤25 MB', '◇a crisis words → add 14416', '◇a < 5 words → stop early'] });
+card({ ...BR, y: 370, h: 64, icon: 'ex', iconSize: 9, ib: '#dcfce7', title: 'AI chat API', file: 'ai.routes.ts · chat.routes',
+  lines: ['POST /ai/chat · GET /status', '◇r no GROQ_API_KEY → 503'] });
+card({ ...BR, y: 440, h: 125, icon: '🛡', ib: '#dcfce7', title: 'Auth + Emergency', file: ['auth.routes.ts', 'emergency.routes.ts'],
+  lines: ['POST /auth/login → JWT 7 d', 'GET|PUT /emergency/profile', '  validated · ≤ 5 contacts', 'POST /emergency/alert', '◇r last alert < 60 s → 429', '◇g else → email family'] });
+
+const S1 = { x: 1010, w: 165 }, S2 = { x: 1195, w: 175 };
+card({ ...S1, y: 145, h: 125, icon: 'TS', iconSize: 9, ib: '#dcfce7', title: 'Appointment svc', file: ['appointment.service.ts', 'utils/schedule.ts'],
+  lines: ['day ∈ availableDays', 'start ≥ now + 15 min', 'date ≤ today + 90 d', 'clinic TZ = UTC+330 min', '◇g free → INSERT confirmed', '◇r overlap → 409'] });
+card({ ...S2, y: 145, h: 62, icon: '📅', ib: '#ffedd5', title: 'Calendar + Meet', file: 'google-calendar.service.ts',
+  lines: ['◇g token → events.insert', '◇a no token → skip + warn'] });
+card({ ...S2, y: 212, h: 58, icon: '✉', ib: '#ffedd5', title: 'Booking mailer', file: 'appointment-email.ts',
+  lines: ['HTML + invite.ics → both'] });
+card({ x: 1010, w: 360, y: 280, h: 154, icon: 'G', ib: '#ede9fe', ic: '#7c3aed', title: 'Groq client', file: 'services/groq.service.ts',
+  lines: ['transcribe(): whisper-large-v3-turbo · verbose_json',
+          'completeJson(): openai/gpt-oss-120b · JSON · T 0.3 · 45 s',
+          'chat(): gpt-oss-120b · vision: qwen/qwen3.8-27b',
+          'voice report → overallState, summary, emotions,',
+          '  scores{stress, anxiety, lowMood, energy, calm}',
+          '◇a seekHelp = true → show helplines',
+          '◇r Groq error / timeout → 503 to client'] });
+card({ x: 1010, w: 360, y: 440, h: 60, icon: '✉', ib: '#ffedd5', title: 'Emergency alert mailer', file: 'emergency.routes.ts → nodemailer',
+  lines: ['To ≤5 family: maps link, nearest hospital, vitals'] });
+card({ x: 1010, w: 360, y: 507, h: 58, icon: '🐘', ib: '#ccfbf1', title: 'TypeORM repositories', file: 'AppDataSource.getRepository(Entity)',
+  lines: ['User · Patient · Doctor · Appointment · Hospital · Bed'] });
+
+/* ---------- 4. data ---------- */
+card({ x: 755, y: 608, w: 230, h: 98, icon: '⚙', ib: '#ccfbf1', title: 'TypeORM DataSource', file: 'config/database.config.ts',
+  lines: ['url = DATABASE_URL · ssl', '◇a synchronize: true (dev only)', 'seedInitialData(): 15 doctors,', 'hospitals, beds if empty'] });
+card({ x: 1000, y: 608, w: 400, h: 98, icon: '🐘', ib: '#ccfbf1', title: 'Neon PostgreSQL', file: 'ap-southeast-1 (Singapore) · pooler · sslmode=require',
+  lines: ['users · patients (emergencyContacts, preferredHospital jsonb)',
+          'doctors (availableDays, availableHours, googleRefreshToken)',
+          'appointments (status, appointmentType, meetingLink)',
+          'hospitals · beds · admissions · notifications · …'] });
+
+/* ---------- 5. external ---------- */
+const E1 = { x: 1435, w: 225 }, E2 = { x: 1672, w: 223 };
+card({ ...E1, y: 145, h: 80, icon: 'G', ib: '#dbeafe', ic: '#2563eb', title: 'Google Calendar API', file: 'googleapis · calendar v3',
+  lines: ['events.insert · hangoutsMeet', 'sendUpdates = all → invites both', '→ returns Meet link'] });
+card({ ...E1, y: 280, h: 154, icon: 'G', ib: '#ede9fe', ic: '#7c3aed', title: 'Groq Cloud API', file: 'api.groq.com/openai/v1',
+  lines: ['/audio/transcriptions', '  whisper-large-v3-turbo', '/chat/completions', '  openai/gpt-oss-120b (JSON)', '  qwen/qwen3.8-27b (vision)', 'Auth: Bearer GROQ_API_KEY', 'free tier: rate limited'] });
+card({ ...E1, y: 500, h: 66, icon: 'G', ib: '#dbeafe', ic: '#2563eb', title: 'Google OAuth 2.0', file: 'oauth2.googleapis.com/token',
+  lines: ['refresh → access token', 'scope: calendar.events'] });
+card({ ...E1, y: 590, h: 92, icon: '⚠', ib: '#fee2e2', title: 'Legacy (not used)', file: 'kept from original repo', fill: '#fff1f2', stroke: '#fca5a5',
+  lines: ['Ollama · Twilio · Redis · Bull', 'MySQL · Firebase · AWS SDK', 'candidates for removal'] });
+card({ ...E1, y: 703, h: 66, icon: '🗺', ib: '#ede9fe', title: 'OpenStreetMap', file: 'Nominatim + Overpass API',
+  lines: ['overpass-api.de · maps.mail.ru', 'kumi.systems · private.coffee'] });
+card({ ...E1, y: 774, h: 36, icon: '⬢', ib: '#ede9fe', title: 'jsDelivr CDN + Vercel static', file: 'ORT .wasm · /models/*.onnx' });
+
+card({ ...E2, y: 225, h: 295, icon: '✉', ib: '#ffedd5', title: 'Email delivery (SMTP)', file: ['nodemailer →', 'smtp.gmail.com:587'],
+  lines: ['STARTTLS', 'SMTP_USER / SMTP_PASS', '(Gmail App Password)', '', '◇a not set → Ethereal test', '  inbox (preview URL in', '  logs, not delivered)', '', 'Sends:', '• booking confirmation', '  + invite.ics to patient', '  and doctor', '• emergency alert to', '  ≤ 5 family contacts', '• 60 s cooldown per user'] });
+card({ ...E2, y: 535, h: 80, icon: '📥', ib: '#ffedd5', title: 'Recipient inboxes', file: 'patient · doctor · family',
+  lines: ['Gmail / Outlook / phone', '.ics → any calendar app', 'invite → Google Calendar'] });
+card({ ...E2, y: 630, h: 80, icon: '🎥', ib: '#dbeafe', title: 'Google Meet', file: 'meet.google.com/xxx-xxxx-xxx',
+  lines: ['patient + doctor join', 'reminders: email 24 h,', 'popup 30 min before'] });
+
+/* ---------- 6. deployment ---------- */
+const DY = 858, DH = 118, DW = 280;
+const DX = [45, 355, 665, 975, 1285, 1595];
+card({ x: DX[0], y: DY, w: DW, h: DH, icon: '🔥', ib: '#fee2e2', title: 'Stage 1 · Model training', file: 'D:\\healthcare\\archive (Python · PyTorch)',
+  lines: ['EfficientNet-B0 · chest X-ray NORMAL / PNEUMONIA', 'test acc 88.5% · sens 91.5% · spec 83.3%', 'threshold 0.62505 → xray_pneumonia.card.json', '→ outputs best weights (.pt)'] });
+card({ x: DX[1], y: DY, w: DW, h: DH, icon: '⬢', ib: '#fee2e2', title: 'Stage 2 · ONNX export', file: 'torch.onnx.export · opset 17',
+  lines: ["input 'input' [1,3,224,224] → 'logit'", 'checked vs onnxruntime-web (Δ ≈ 0.06%)', '→ frontend/public/models/', '  xray_pneumonia.onnx (15.3 MB)'] });
+card({ x: DX[2], y: DY, w: DW, h: DH, icon: '💻', ib: '#fee2e2', title: 'Stage 3 · Local dev', file: '.claude/launch.json',
+  lines: ['frontend: vite → localhost:3000', 'backend: nodemon + ts-node → :3001', 'TS_NODE_TRANSPILE_ONLY=true', 'backend/.env (gitignored) · .env.local', 'tests: 15 schedule + 10 AI routes'] });
+card({ x: DX[3], y: DY, w: DW, h: DH, icon: '🔑', ib: '#fee2e2', title: 'Stage 4 · Google OAuth (once)', file: 'npm run google-auth',
+  lines: ['scripts/get-google-refresh-token.ts', 'callback localhost:3005/oauth2callback', 'Desktop OAuth client · calendar.events', '→ GOOGLE_PLATFORM_REFRESH_TOKEN'] });
+card({ x: DX[4], y: DY, w: DW, h: DH, icon: '⌥', ib: '#fee2e2', title: 'Stage 5 · Source control', file: 'github.com/chahak235/HeathCare-Plus',
+  lines: ['branch main · git over HTTPS', 'small commits (2–3 files each)', '◇r never commits backend/.env'] });
+card({ x: DX[5], y: DY, w: 290, h: DH, icon: '☁', ib: '#fee2e2', title: 'Stage 6 · Hosting (planned)', file: 'Vercel (frontend) · Render (Dockerfile)',
+  lines: ['Vercel: VITE_API_URL=https://<api>/api', 'Render: DATABASE_URL, JWT_SECRET,', '  GROQ_API_KEY, SMTP_*, GOOGLE_*', '◇a free tier sleeps after 15 min idle'] });
+const dl = ['D1', 'D2', 'D3', 'D4', 'D5'];
+for (let i = 0; i < 5; i++) {
+  const x1 = DX[i] + DW, x2 = DX[i + 1];
+  arrow([[x1, DY + 59], [x2, DY + 59]], 'deploy', { n: dl[i] });
+}
+
+/* ---------- flows (numbered in order) ---------- */
+// 1–2 open the site
+arrow([[110, 195], [110, 175]], 'api', { n: 1, b: [96, 185] });
+txt(124, 189, 'open site', { size: 8.6, weight: 600, fill: FLOW.api.c, halo: true });
+arrow([[220, 111], [255, 111]], 'api', { n: 2 });
+// 3–7 booking
+arrow([[455, 200], [490, 200]], 'local', { n: 3 });
+arrow([[690, 185], [765, 185]], 'api', { n: 4, t: 'GET · JSON', tp: [727, 175] });
+arrow([[690, 240], [765, 240]], 'api', { n: 6, t: 'POST · JSON', tp: [727, 230] });
+arrow([[950, 205], [1010, 205]], 'call');
+arrow([[1010, 262], [950, 262]], 'error', { t: '✗ 409', tp: [980, 257] });
+arrow([[1175, 175], [1195, 175]], 'call');
+arrow([[1175, 241], [1195, 241]], 'call');
+arrow([[1370, 176], [1435, 176]], 'notify', { n: 8, t: 'HTTPS', tp: [1402, 166] });
+arrow([[1370, 245], [1672, 245]], 'notify', { n: 9, b: [1452, 245], t: 'SMTP 587 · HTML + .ics', tp: [1560, 241] });
+arrow([[1783, 520], [1783, 535]], 'notify', { n: 10, b: [1800, 527] });
+// 5 / 7 / 18 SQL
+arrow([[1190, 565], [1190, 608]], 'db', { n: '5·7', b: [1190, 590] });
+txt(1206, 597, '+18 · SQL (pg, TLS :5432)', { size: 8.6, weight: 600, fill: FLOW.db.c, halo: true });
+arrow([[985, 657], [1000, 657]], 'db');
+// 11–14 voice
+arrow([[455, 320], [490, 320]], 'local', { n: 11 });
+arrow([[690, 320], [765, 320]], 'api', { n: 12, t: 'POST multipart', tp: [727, 310] });
+arrow([[950, 320], [1010, 320]], 'call');
+arrow([[1370, 318], [1435, 318]], 'ai', { n: 13, t: 'STT', tp: [1402, 309] });
+arrow([[1370, 352], [1435, 352]], 'ai', { n: 14, t: 'LLM JSON', tp: [1402, 343] });
+// 15–16 chat
+arrow([[455, 400], [490, 400]], 'local');
+arrow([[690, 392], [765, 392]], 'api', { n: 15, t: 'POST · JSON', tp: [727, 383] });
+arrow([[765, 424], [690, 424]], 'error', { t: '✗ 503', tp: [727, 437] });
+arrow([[950, 402], [1010, 402]], 'call');
+arrow([[1370, 405], [1435, 405]], 'ai', { n: 16, t: 'chat', tp: [1402, 396] });
+// 17–22 auth / profile / emergency
+arrow([[455, 500], [490, 500]], 'local');
+arrow([[690, 465], [765, 465]], 'api', { n: 17, t: 'login JSON', tp: [727, 457] });
+arrow([[690, 503], [765, 503]], 'api', { n: 18, t: 'PUT · Bearer', tp: [727, 495] });
+arrow([[690, 541], [765, 541]], 'api', { n: 20, t: 'POST alert', tp: [727, 533] });
+arrow([[950, 470], [1010, 470]], 'call');
+arrow([[950, 536], [1010, 536]], 'call');
+arrow([[1370, 470], [1672, 470]], 'notify', { n: 21, b: [1550, 470], t: 'SMTP 587 · alert email', tp: [1550, 462] });
+arrow([[590, 565], [590, 585]], 'local', { n: 19, b: [608, 575] });
+arrow([[255, 500], [220, 500]], 'notify', { n: 22 });
+// 23–24 hospital finder
+arrow([[690, 640], [720, 640], [720, 742], [1435, 742]], 'ai', { n: 23, seg: 2, b: [1000, 742], t: 'HTTPS · Nominatim search + Overpass QL → JSON', tp: [1180, 736] });
+arrow([[255, 635], [220, 635]], 'notify', { n: 24 });
+// 25–26 x-ray
+arrow([[455, 752], [490, 752]], 'local', { n: 25 });
+arrow([[690, 792], [1435, 792]], 'ai', { n: 26, b: [1000, 792], t: 'HTTPS GET · ORT .wasm + xray_pneumonia.onnx (15.3 MB, cached)', tp: [1200, 786] });
+// 27 realtime push
+arrow([[755, 111], [690, 111]], 'ws', { n: 27, t: 'WS events', tp: [722, 102] });
+
+/* ---------- legend ---------- */
+el('rect', { x: 15, y: 996, width: 1890, height: 74, rx: 10, fill: '#f8fafc', stroke: '#cbd5e1' });
+txt(30, 1016, 'LEGEND', { size: 11, weight: 700, fill: '#0f172a' });
+const keys = ['api', 'local', 'call', 'db', 'ai', 'notify', 'ws', 'deploy', 'error'];
+keys.forEach((k, i) => {
+  const col = i % 5, row = Math.floor(i / 5);
+  const x = 100 + col * 360, y = 1016 + row * 24;
+  const a = { d: `M${x},${y - 4} L${x + 34},${y - 4}`, stroke: FLOW[k].c, 'stroke-width': 2, fill: 'none', 'marker-end': `url(#m-${k})` };
+  if (FLOW[k].dash) a['stroke-dasharray'] = FLOW[k].dash;
+  el('path', a);
+  txt(x + 42, y, FLOW[k].label, { size: 9.5 });
+});
+[['g', '◇ ✓ success / OK'], ['a', '◇ warning / review'], ['r', '◇ ✗ fail / block']].forEach(([c, s], i) => {
+  const x = 1540 + i * 0, y = 1032 + i * 13;
+  el('polygon', { points: `${x},${y - 9} ${x + 5},${y - 4} ${x},${y + 1} ${x - 5},${y - 4}`, fill: DIA[c] });
+  txt(x + 10, y, s, { size: 9.5, fill: DIA[c], weight: 600 });
+});
+txt(1700, 1032, '① … ㉗ numbered flows run in order;', { size: 9.5 });
+txt(1700, 1045, 'D1–D5 = build/deploy steps.', { size: 9.5 });
+txt(1700, 1058, 'Unlabelled grey = route → service.', { size: 9.5 });
+</script>
+</body>
+</html>

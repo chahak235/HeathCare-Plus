@@ -40,6 +40,10 @@ cd frontend && npm run dev          # http://localhost:3000
 | 8 | Connect Neon database | Done. Backend connects to Neon, created the tables and added 15 doctors plus hospitals and beds. Checked: `/api/doctors` returns 15, the availability calendar works, the booking window shows the doctor calendar |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
+## Docs
+
+- `docs/system-architecture.html`: low-level architecture and data-flow diagram (open in any browser). Update it when components or flows change.
+
 ## Next steps (in order)
 
 1. **Add `GROQ_API_KEY`** to `backend/.env` (database and `JWT_SECRET` are already set; the database is Neon).
