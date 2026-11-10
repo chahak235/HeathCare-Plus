@@ -168,7 +168,7 @@ Always consult with qualified healthcare professionals for medical diagnosis and
       name: 'Chest X-ray',
       description: 'Pneumonia screening',
       icon: <XRayIcon className="w-5 h-5" />,
-      color: 'from-blue-500 to-indigo-500',
+      color: 'from-primary-500 to-primary-600',
       models: availableModels.filter(m => m.specialty.includes('xray')),
     },
     {
@@ -182,15 +182,15 @@ Always consult with qualified healthcare professionals for medical diagnosis and
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-neutral-900 dark:to-neutral-950">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white dark:from-neutral-900 dark:to-neutral-950">
       <Container>
         {/* Hero Section */}
         <div className="pt-8 pb-6 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl">
+            <div className="p-3 bg-primary-600 rounded-2xl">
               <Camera className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white">
               AI Medical Image Analysis
             </h1>
           </div>
@@ -213,13 +213,13 @@ Always consult with qualified healthcare professionals for medical diagnosis and
               </span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-full shadow-sm">
-              <WoundIcon className="w-4 h-4 text-blue-500" />
+              <WoundIcon className="w-4 h-4 text-primary-500" />
               <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                 Runs on your device
               </span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-full shadow-sm">
-              <Brain className="w-4 h-4 text-purple-500" />
+              <Brain className="w-4 h-4 text-primary-600" />
               <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                 Medical AI Models
               </span>
@@ -247,8 +247,8 @@ Always consult with qualified healthcare professionals for medical diagnosis and
                     className={`
                       flex flex-col items-center p-4 rounded-xl border-2 transition-all
                       ${analysisType === type.id
-                        ? `border-blue-500 bg-gradient-to-br ${type.color} text-white scale-[1.02]`
-                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-neutral-800 hover:border-blue-300 dark:hover:border-blue-700'
+                        ? `border-primary-600 bg-gradient-to-br ${type.color} text-white scale-[1.02]`
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-neutral-800 hover:border-primary-300 dark:hover:border-primary-700'
                       }
                     `}
                   >
@@ -334,10 +334,10 @@ Always consult with qualified healthcare professionals for medical diagnosis and
           {/* Right Column - Info & History */}
           <div className="space-y-6">
             {/* AI Models Info */}
-            <Card className="p-6 bg-gradient-to-b from-blue-50 to-white dark:from-blue-900/20 dark:to-transparent">
+            <Card className="p-6 bg-gradient-to-b from-primary-50 to-white dark:from-primary-900/20 dark:to-transparent">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
-                  <Brain className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-primary-100 dark:bg-primary-800/30 rounded-lg">
+                  <Brain className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-neutral-900 dark:text-white">
@@ -390,8 +390,8 @@ Always consult with qualified healthcare professionals for medical diagnosis and
             {/* Analysis History */}
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-purple-100 dark:bg-purple-800/30 rounded-lg">
-                  <History className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                  <History className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-neutral-900 dark:text-white">

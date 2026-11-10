@@ -118,10 +118,10 @@ const MedicalImageUpload: React.FC<MedicalImageUploadProps> = ({
   return (
     <div className="space-y-6">
       {/* Analysis Type Info */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl">
+      <div className="bg-gradient-to-r from-primary-50 to-primary-50 dark:from-primary-900/20 dark:to-primary-900/20 p-6 rounded-2xl">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-100 dark:bg-blue-800/30 rounded-xl">
-            <ImageIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <div className="p-3 bg-primary-100 dark:bg-primary-800/30 rounded-xl">
+            <ImageIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -154,8 +154,8 @@ const MedicalImageUpload: React.FC<MedicalImageUploadProps> = ({
           relative border-3 border-dashed rounded-2xl p-8 text-center cursor-pointer
           transition-all duration-300 ease-in-out
           ${isDragActive 
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]' 
-            : 'border-gray-300 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600'
+            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 scale-[1.02]' 
+            : 'border-gray-300 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-600'
           }
           ${error ? 'border-red-300 dark:border-red-700' : ''}
           ${selectedImage ? 'bg-green-50 dark:bg-green-900/10' : ''}
@@ -199,12 +199,12 @@ const MedicalImageUpload: React.FC<MedicalImageUploadProps> = ({
               <div className={`
                 p-4 rounded-full transition-colors
                 ${isDragActive 
-                  ? 'bg-blue-100 dark:bg-blue-800/30' 
+                  ? 'bg-primary-100 dark:bg-primary-800/30' 
                   : 'bg-gray-100 dark:bg-gray-800'
                 }
               `}>
                 {isDragActive ? (
-                  <Upload className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-bounce" />
+                  <Upload className="w-12 h-12 text-primary-600 dark:text-primary-400 animate-bounce" />
                 ) : (
                   <FileImage className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                 )}
