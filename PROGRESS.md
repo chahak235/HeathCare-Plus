@@ -51,6 +51,10 @@ cd frontend && npm run dev          # http://localhost:3000
 
 - `docs/system-architecture.html`: low-level architecture and data-flow diagram (open in any browser). Update it when components or flows change.
 
+## Reminder
+
+- **Publish the Google app before 18 November 2026.** The Google token was created on 11 Nov in Testing mode and stops working after 7 days (Meet links and emails fail). Google Cloud → Google Auth Platform → Audience → Publish app, then run `npm run google-auth -- --print` in `backend` and paste the new `GOOGLE_PLATFORM_REFRESH_TOKEN` into Render.
+
 ## Next steps (in order)
 
 1. **Email**: done (real Gmail SMTP works).
