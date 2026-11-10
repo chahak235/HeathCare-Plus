@@ -19,6 +19,9 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      # Encrypts health fields at rest. Must be the SAME value as backend/.env
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
       - key: FRONTEND_URL
         sync: false
       - key: GROQ_API_KEY

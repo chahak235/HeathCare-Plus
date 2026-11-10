@@ -21,6 +21,9 @@ import aiRoutes from './routes/ai.routes';
 import appointmentRoutes from './routes/appointment.routes';
 import emergencyRoutes from './routes/emergency.routes';
 import skinRoutes from './routes/skin.routes';
+import { accessLog } from './middleware/access-log';
+import reviewRoutes from './routes/review.routes';
+import adminRoutes from './routes/admin.routes';
 import { AlertService } from './services/alert.service'; // ✅ ADD THIS
 
 import { assertProductionSecrets } from './config/secrets';
@@ -112,6 +115,8 @@ console.log('18.8. hospitalAdminRoutes imported');
 console.log('✅ All imports successful');
 
 const app: Application = express();
+// Render/Vercel sit behind one proxy hop: use the real visitor IP for rate limits and login lockout
+app.set('trust proxy', 1);
 console.log('19. App created');
 
 // Security middleware
@@ -208,7 +213,7 @@ app.use(`${apiPrefix}/auth`, authRoutes);
 console.log('32. Auth routes mounted');
 
 // Patient records and hospital operations need a staff login
-app.use(`${apiPrefix}/patients`, clinicalStaff as any, patientRoutes);
+app.use(`${apiPrefix}/patients`, accessLog('patient_records') as any, clinicalStaff as any, patientRoutes);
 console.log('33. Patient routes mounted');
 
 app.use(`${apiPrefix}/images`, imageRoutes);
@@ -229,7 +234,7 @@ console.log('38. Allocation routes mounted');
 app.use(`${apiPrefix}/beds`, readPublicWriteHospital as any, bedsRoutes);
 console.log('39. Beds routes mounted');
 
-app.use(`${apiPrefix}/patients-api`, clinicalStaff as any, patientApiRoutes);
+app.use(`${apiPrefix}/patients-api`, accessLog('patient_records') as any, clinicalStaff as any, patientApiRoutes);
 console.log('40. Patient API routes mounted');
 
 app.use(`${apiPrefix}/doctors`, doctorsRoutes);
@@ -259,11 +264,13 @@ console.log('44. AI routes mounted');
 app.use(`${apiPrefix}/triage`, triageRoutes);
 console.log('45. Triage routes mounted');
 
-app.use(`${apiPrefix}/appointments`, appointmentRoutes);
+app.use(`${apiPrefix}/appointments`, accessLog('appointments') as any, appointmentRoutes);
 console.log('46. Appointment routes mounted');
 
-app.use(`${apiPrefix}/emergency`, emergencyRoutes);
+app.use(`${apiPrefix}/emergency`, accessLog('health_profile') as any, emergencyRoutes);
 app.use(`${apiPrefix}/skin`, skinRoutes);
+app.use(`${apiPrefix}/reviews`, reviewRoutes);
+app.use(`${apiPrefix}/admin`, hospitalStaff as any, adminRoutes);
 console.log('46.5 Emergency routes mounted');
 
 // 404 handler
