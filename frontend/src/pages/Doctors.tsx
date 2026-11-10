@@ -56,8 +56,9 @@ interface Doctor {
     days: string[];
     hours: string;
   };
-  successRate: number;
-  responseTime: string;
+  patientCount: number;
+  slotMinutes: number;
+  phone?: string;
   verified: boolean;
   photoUrl: string;
   bio: string;
@@ -96,13 +97,9 @@ export const Doctors: React.FC = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [revealedPhones, setRevealedPhones] = useState<Record<string, string>>({});
 
-  const handleCallClinic = (doctorId: string) => {
-    if (!revealedPhones[doctorId]) {
-      const prefix = ['9', '8', '7'][Math.floor(Math.random() * 3)];
-      const number = prefix + Math.floor(100000000 + Math.random() * 900000000).toString();
-      const formatted = `+91 ${number.substring(0, 5)} ${number.substring(5)}`;
-      setRevealedPhones(prev => ({ ...prev, [doctorId]: formatted }));
-    }
+  // Reveal the clinic number stored for this doctor (never a made-up number)
+  const handleCallClinic = (doctor: Doctor) => {
+    if (doctor.phone) setRevealedPhones(prev => ({ ...prev, [doctor.id]: doctor.phone! }));
   };
 
   const [specialties, setSpecialties] = useState<string[]>([
@@ -155,11 +152,13 @@ export const Doctors: React.FC = () => {
               distance: ''
             },
             schedule: {
-              days: doc.available_days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-              hours: doc.available_hours || '9:00 AM - 5:00 PM'
+              days: doc.availableDays || doc.available_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+              hours: doc.availableHours || doc.available_hours || '9:00 AM - 5:00 PM'
             },
-            successRate: 95,
-            responseTime: 'Under 2 hours',
+            // Real numbers from the database (no invented success rates)
+            patientCount: doc.patientCount || doc.patient_count || 0,
+            slotMinutes: doc.consultationDuration || 30,
+            phone: doc.phone || undefined,
             verified: doc.is_verified !== false,
             photoUrl: doc.profileImageUrl || doc.profile_image_url || `https://ui-avatars.com/api/?name=${doc.name}&background=00C2CB&color=fff&size=128`,
             bio: doc.bio || 'Experienced healthcare professional providing quality medical care.',
@@ -445,12 +444,12 @@ export const Doctors: React.FC = () => {
                               <span className="font-medium">{doctor.experience} {t('doctors_page.years')}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm">{t('doctors_page.success_rate')}</span>
-                              <span className="font-medium text-green-600">{doctor.successRate}%</span>
+                              <span className="text-sm">{t('doctors_page.patients_treated', 'Patients treated')}</span>
+                              <span className="font-medium text-green-600">{doctor.patientCount ? doctor.patientCount.toLocaleString('en-IN') + '+' : '—'}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm">{t('doctors_page.response_time')}</span>
-                              <span className="font-medium">{doctor.responseTime}</span>
+                              <span className="text-sm">{t('doctors_page.consultation_length', 'Consultation')}</span>
+                              <span className="font-medium">{doctor.slotMinutes} min</span>
                             </div>
                           </div>
                         </div>
@@ -546,10 +545,10 @@ export const Doctors: React.FC = () => {
                         >
                           {t('doctors_page.book_appointment')}
                         </Button>
-                        {!revealedPhones[doctor.id] ? (
+                        {!doctor.phone ? null : !revealedPhones[doctor.id] ? (
                           <Button
                             variant="secondary"
-                            onClick={() => handleCallClinic(doctor.id)}
+                            onClick={() => handleCallClinic(doctor)}
                             leftIcon={<Phone className="w-4 h-4" />}
                             className="w-full whitespace-nowrap justify-center"
                           >
@@ -557,7 +556,7 @@ export const Doctors: React.FC = () => {
                           </Button>
                         ) : (
                           <a
-                            href={`tel:${revealedPhones[doctor.id].replace(/\s/g, '')}`}
+                            href={`tel:${revealedPhones[doctor.id].replace(/[^\d+]/g, '')}`}
                             className="w-full flex items-center justify-center px-4 py-2.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-semibold rounded-xl border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors whitespace-nowrap gap-2"
                           >
                             <Phone className="w-4 h-4" />
