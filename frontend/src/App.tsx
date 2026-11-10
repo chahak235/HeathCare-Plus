@@ -22,6 +22,8 @@ import { BedStatusProvider } from './contexts/BedStatusContext';
 import DoctorDashboard from './pages/doctor/Dashboard';
 import PatientPortal from './pages/patient/Portal';
 import Emergency from './pages/Emergency';
+import Privacy from './pages/legal/Privacy';
+import Terms from './pages/legal/Terms';
 
 const NotFound = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -58,6 +60,8 @@ function App() {
               <Route path="map-prediction" element={<MapPrediction />} />
               <Route path="health-assessment" element={<HealthAssessment />} />
               <Route path="emergency" element={<Emergency />} />
+              <Route path="privacy" element={<Privacy />} />
+              <Route path="terms" element={<Terms />} />
               
               {/* Protected Routes */}
               <Route path="dashboard" element={
