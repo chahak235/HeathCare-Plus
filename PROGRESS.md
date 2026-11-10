@@ -38,7 +38,7 @@ cd frontend && npm run dev          # http://localhost:3000
 | 5 | Worldwide hospital map: search any state or city, all hospitals, contacts, Google Maps directions | Done. Free OpenStreetMap search (`frontend/src/services/hospital-finder.ts`, page `MapPrediction.tsx`). Tested: 791 hospitals in Pune. Limits: free servers can take 20 to 60 s; only about 4% of hospitals have a phone number in OpenStreetMap (Google Maps link shows the rest). Fake hospitals removed. Later: cache results on the backend to make it faster |
 | 6 | Emergency: patient profile (contacts, height, weight, conditions), emergency button calls hospital and family | Done, not tested with a logged-in user (needs the database). New `/emergency` page: Call 112, SOS finds nearest hospital, call and text buttons for nearest hospital, usual hospital and family, automatic email to family with location and health details. Health profile form on `/profile` (patients are sent there after sign-up). Backend `backend/src/routes/emergency.routes.ts` (login required). Navbar emergency link fixed (was a broken `tel:911`) |
 | 8 | Connect Neon database | Done. Backend connects to Neon, created the tables and added 15 doctors plus hospitals and beds. Checked: `/api/doctors` returns 15, the availability calendar works, the booking window shows the doctor calendar |
-| 9 | Groq AI key and business email | Done. `GROQ_API_KEY` set; tested AI chat reply and a full voice report (spoken clip → Whisper transcript → AI report with scores). Business Gmail `healthcareplus.care@gmail.com` set as `SMTP_USER` and `EMAIL_FROM`; emails still go to the Ethereal test inbox until `SMTP_PASS` (Gmail App Password) is added |
+| 9 | Groq AI key and business email | Done. `GROQ_API_KEY` set; tested AI chat reply and a full voice report (spoken clip → Whisper transcript → AI report with scores). Business Gmail `healthcareplus.care@gmail.com` set as `SMTP_USER` and `EMAIL_FROM`; Gmail App Password added; real email tested (sent to the business inbox via smtp.gmail.com:587) |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
 ## Docs
@@ -47,7 +47,7 @@ cd frontend && npm run dev          # http://localhost:3000
 
 ## Next steps (in order)
 
-1. **Gmail App Password** for healthcareplus.care@gmail.com: turn on 2-Step Verification, create an app password, put it in `SMTP_PASS` in `backend/.env`.
+1. **Email**: done (real Gmail SMTP works).
 2. **Test end to end**: sign up as a patient, fill the health profile, book an online and an offline appointment, try SOS, try the voice analyzer, and try a real chest X-ray.
 3. **Email**: add `SMTP_USER` / `SMTP_PASS` (Gmail App Password) so confirmations reach real inboxes.
 4. **Google Meet and Calendar**: sign in as healthcareplus.care@gmail.com in the browser pane, create the Google Cloud project, enable Calendar API, consent screen (add test users), Desktop OAuth client, then run `npm run google-auth` in `backend`.
@@ -63,7 +63,6 @@ To add the skin model later: convert it to ONNX the same way, put it in `fronten
 ## Things you need to provide later
 
 - Google Cloud OAuth client (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`) for Meet and Calendar
-- Gmail App Password for healthcareplus.care@gmail.com (`SMTP_PASS`)
 - Skin condition model from your friend
 - GitHub repo URL when you want to push
 
