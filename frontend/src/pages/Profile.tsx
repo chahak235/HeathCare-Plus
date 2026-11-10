@@ -271,7 +271,7 @@ export const Profile: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                     <span className="text-neutral-600 dark:text-neutral-400">Member Since</span>
                                     <span className="font-medium">
-                                        {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                                        {(user.created_at || (user as any).createdAt) ? new Date(user.created_at || (user as any).createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">

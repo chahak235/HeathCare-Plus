@@ -40,6 +40,7 @@ cd frontend && npm run dev          # http://localhost:3000
 | 8 | Connect Neon database | Done. Backend connects to Neon, created the tables and added 15 doctors plus hospitals and beds. Checked: `/api/doctors` returns 15, the availability calendar works, the booking window shows the doctor calendar |
 | 9 | Groq AI key and business email | Done. `GROQ_API_KEY` set; tested AI chat reply and a full voice report (spoken clip → Whisper transcript → AI report with scores). Business Gmail `healthcareplus.care@gmail.com` set as `SMTP_USER` and `EMAIL_FROM`; Gmail App Password added; real email tested (sent to the business inbox via smtp.gmail.com:587) |
 | 10 | Google Meet + Calendar live | Done. Google Cloud project "HealthCare Plus" (`versatile-art-514316-e7`) under healthcareplus.care@gmail.com: Calendar API on, consent screen in Testing mode (test user: healthcareplus.care@gmail.com), Desktop OAuth client. `npm run google-auth` now saves `GOOGLE_PLATFORM_REFRESH_TOKEN` into `backend/.env` itself (never printed; `--print` for Render). Tested a real online booking: confirmed, Meet link created, calendar invite and emails to patient and doctor. Test data: Dr. Rajesh Kumar (id 1) email = healthcareplus.care+doctor@gmail.com; test patient healthcareplus.care+patient@gmail.com (password in `backend/.env` as TEST_PATIENT_PASSWORD) |
+| 11 | Fixes from your testing + cleanup + security | Done. Chat bubble shows short formatted answers in site colors; Features opens the real X-ray analyzer; X-ray results crash fixed; SOS siren + vibration; removed fake success stories, random clinic numbers, fake success rates and fake profile activity; profile shows real bookings and BMI; navbar no longer overflows on laptops. Security: bookings, patient data, doctor schedules/settings now need login and ownership (`backend/src/middleware/appointment-access.ts`, 16 checks pass); Google Calendar connect uses a signed 10-minute link |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
 ## Docs
@@ -52,10 +53,10 @@ cd frontend && npm run dev          # http://localhost:3000
 2. **Test end to end**: sign up as a patient, fill the health profile, book an online and an offline appointment, try SOS, try the voice analyzer, and try a real chest X-ray.
 3. **Email**: add `SMTP_USER` / `SMTP_PASS` (Gmail App Password) so confirmations reach real inboxes.
 4. **Google Meet and Calendar**: done. Before real launch: publish the consent screen (Audience → Publish app) or Google will expire the refresh token every 7 days while in Testing mode.
-5. **Product website polish**: business branding, landing page copy, pricing or contact page, remove leftover demo content (random success stories, random clinic phone numbers on the Doctors page).
+5. **Product website polish**: business branding, landing page copy, pricing or contact page (needs your business details). Demo content already removed.
 6. **Doctor mode**: doctor sign-up already lets doctors set days and hours in the dashboard settings. Could add per-day hours and holidays.
 7. **Hospital/admin mode**: review the hospital dashboard (beds, doctors) for real data.
-8. **Security before launch**: add login checks to appointment and doctor routes, turn off `synchronize: true` in production, protect the Google connect route.
+8. **Security before launch**: appointment/doctor routes and Google connect are protected. Still to do: legacy `/api/patients` and `/api/patients-api` (old demo data) need login; turn off `synchronize: true` in production; require `JWT_SECRET` in production.
 9. **Skin model**: when your friend sends it, convert to ONNX and enable it (see task 1 note).
 10. **Deploy**: add the new environment variables on Render, then push to your GitHub repo when you're ready.
 
@@ -68,7 +69,5 @@ To add the skin model later: convert it to ONNX the same way, put it in `fronten
 
 ## Known issues found in the original code
 
-- Almost no API route requires login. Anyone can book, cancel or change doctor availability
+- Legacy `/api/patients*` demo routes still have no login (appointments, doctors, emergency are fixed)
 - Database uses `synchronize: true` in production
-- Doctors page shows randomly generated phone numbers
-- Google Calendar connect route has no login check
