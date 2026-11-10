@@ -20,7 +20,20 @@ import {
 import { Button } from '../../ui/Button';
 import { MedicalDisclaimer } from '../../shared/MedicalDisclaimer';
 import { useAuth } from '../../../contexts/AuthContext'; // Add this import
-import { ollamaService } from '../../../services/ollama-service'; // Add this
+import { ollamaService } from '../../../services/ollama-service';
+import ChatMarkdown from '../../chat/ChatMarkdown';
+
+// The bubble is small: ask for short, list-style answers instead of long reports.
+const BUBBLE_STYLE =
+  '\n\n(Reply format for a small chat window: at most 120 words, 3-6 short bullet points, no tables, no headings, no greeting. Finish with one short line on when to see a doctor.)';
+
+// The service prepends a long disclaimer; the bubble shows a fixed one-line note instead.
+const stripDisclaimer = (text: string) =>
+  text
+    .replace(/^\s*\*\*⚠️ Disclaimer:\*\*[^\n]*\n+/, '')
+    // only a standalone closing line, never words inside the answer's last sentence
+    .replace(/\n\s*\*?This is general information[^\n]*\*?\s*$/i, '')
+    .trim();
 
 interface ChatMessage {
   id: string;
@@ -132,18 +145,7 @@ const FloatingChatWidget: React.FC = () => {
     saveMessages(updatedMessages);
     setInputText('');
 
-    // Add loading message
-    const loadingMessage: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      content: '',
-      sender: 'assistant',
-      timestamp: new Date(),
-      type: 'text',
-      isSaved: isAuthenticated
-    };
-
-    const messagesWithLoading = [...updatedMessages, loadingMessage];
-    setMessages(messagesWithLoading);
+    // The "Thinking..." row below the messages shows progress; no empty placeholder bubble.
     setIsLoading(true);
 
     try {
@@ -152,13 +154,11 @@ const FloatingChatWidget: React.FC = () => {
       if (isAuthenticated && user) {
         // Add user context for personalized responses
         enhancedPrompt = `User Profile: ${user.name || 'User'}. ${user.medicalHistory ? 'Medical history available.' : ''}
-        
-        User Question: ${inputText.trim()}
-        
-        Please provide personalized advice considering this is a returning user.`;
+
+        User Question: ${inputText.trim()}`;
       }
 
-      const aiResponse = await ollamaService.generate(enhancedPrompt, true);
+      const aiResponse = stripDisclaimer(await ollamaService.generate(enhancedPrompt + BUBBLE_STYLE, true));
       
       // Replace loading with AI response
       const aiMessage: ChatMessage = {
@@ -253,7 +253,7 @@ const FloatingChatWidget: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-2xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105"
+          className="flex items-center justify-center w-16 h-16 rounded-full bg-primary-600 text-white shadow-2xl hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 transition-all transform hover:scale-105"
           aria-label="Open chat"
         >
           <MessageSquare className="w-8 h-8" />
@@ -265,9 +265,9 @@ const FloatingChatWidget: React.FC = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-96 h-[600px] bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl flex flex-col border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="w-[calc(100vw-2rem)] sm:w-96 h-[min(600px,calc(100vh-6rem))] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl flex flex-col border border-neutral-200 dark:border-neutral-700 overflow-hidden">
           {/* Header */}
-          <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex justify-between items-center">
+          <div className="p-4 bg-primary-600 text-white flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
                 <Bot className="w-5 h-5" />
@@ -327,10 +327,10 @@ const FloatingChatWidget: React.FC = () => {
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl p-3 ${
+                  className={`max-w-[85%] rounded-2xl p-3 ${
                     message.sender === 'user'
-                      ? 'bg-blue-500 text-white rounded-br-none'
-                      : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-bl-none'
+                      ? 'bg-primary-600 text-white rounded-br-none'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-none'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -346,7 +346,11 @@ const FloatingChatWidget: React.FC = () => {
                       {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-sm">{message.content}</p>
+                  {message.sender === 'assistant' ? (
+                    <ChatMarkdown content={message.content} />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  )}
                   {message.sender === 'assistant' && !isAuthenticated && (
                     <div className="mt-2 pt-2 border-t border-white/20">
                       <p className="text-xs opacity-75 italic">
@@ -383,7 +387,7 @@ const FloatingChatWidget: React.FC = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Type your health question..."
-                className="flex-1 bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 disabled={isLoading}
               />
               <button
@@ -401,7 +405,7 @@ const FloatingChatWidget: React.FC = () => {
               <button
                 onClick={handleSendMessage}
                 disabled={!inputText.trim() || isLoading}
-                className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Send message"
               >
                 <Send className="w-5 h-5" />
@@ -412,7 +416,7 @@ const FloatingChatWidget: React.FC = () => {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => setInputText('I have headache, what should I do?')}
-                className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                className="px-3 py-1 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full hover:bg-primary-100 dark:hover:bg-primary-900/50"
               >
                 Headache?
               </button>
@@ -436,7 +440,7 @@ const FloatingChatWidget: React.FC = () => {
             <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
               <div className="flex items-center gap-2">
                 <Shield className="w-3 h-3" />
-                <span>Processed by Groq AI</span>
+                <span>Groq AI · not medical advice · emergency: 112</span>
               </div>
               <div>
                 {isAuthenticated ? (
