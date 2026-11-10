@@ -32,7 +32,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // every hospital's pooled together.
   useEffect(() => {
     if (user?.role !== 'hospital' || !user.id) return;
-    const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     fetch(`${API_URL}/hospitals/hospital-for-user/${user.id}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => setHospitalId(d?.data?.hospitalId ?? null))

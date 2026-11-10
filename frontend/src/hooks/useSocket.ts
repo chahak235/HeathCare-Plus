@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://healthcare-backend-tylz.onrender.com';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
 
 export const useSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);

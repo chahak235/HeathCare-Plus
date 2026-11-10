@@ -19,7 +19,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface RealAnalysisResult {
   overallImpression: string;

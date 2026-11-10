@@ -58,7 +58,7 @@ interface AuthContextType {
 // Constants
 // ============================================================================
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const STORAGE_KEYS = {
   TOKEN: 'auth_token',
   USER: 'auth_user',

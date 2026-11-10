@@ -4,8 +4,8 @@ import { io, Socket } from 'socket.io-client';
 import type { Bed, BedUpdateEvent, OccupancyMetrics, SpecialtyOccupancy } from '../types/bed.types';
 import { useAuth } from './AuthContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://healthcare-backend-tylz.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
 
 interface BedStatusContextValue {
   beds: Bed[];

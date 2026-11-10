@@ -5,7 +5,7 @@ import { GlassCard } from '../../components/layout/GlassCard';
 import { Badge } from '../../components/ui/Badge';
 import { Search, Loader2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Which status changes make sense to offer from each current status —
 // mirrors the real lifecycle the backend enforces (allocation.routes.ts):
