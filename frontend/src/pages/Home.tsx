@@ -55,60 +55,12 @@ import {
   Share2
 } from 'lucide-react';
 
-const generateRandomStories = () => {
-  const firstNamesM = ['James', 'Robert', 'John', 'Michael', 'David', 'William', 'Richard', 'Joseph', 'Thomas', 'Charles'];
-  const firstNamesF = ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen'];
-  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
-  const cities = ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Phoenix, AZ', 'Philadelphia, PA', 'San Antonio, TX', 'San Diego, CA'];
-  const conditions = ['Cardiac Arrhythmia', 'Asthma Management', 'Diabetes Management', 'Mental Wellness', 'Post-Op Recovery', 'Hypertension', 'Sleep Apnea'];
-  const doctors = ['Dr. Sarah Chen', 'Dr. James Wilson', 'Dr. Emma Johnson', 'Dr. Lisa Wang', 'Dr. Michael Rodriguez', 'Dr. Alan Grant', 'Dr. Emily Stone'];
-  const hospitals = ['Mayo Clinic', 'Johns Hopkins', 'Cleveland Clinic', 'Massachusetts General', 'Stanford Health', 'Mount Sinai', 'UCSF Medical Center'];
-  const quotes = [
-    "Early detection through AI analysis saved my life. The continuous monitoring helped me regain control of my heart health.",
-    "The voice analysis detected subtle changes in my breathing. Early treatment made all the difference in managing my respiratory condition.",
-    "Continuous glucose monitoring and AI insights transformed how I manage my diabetes. My A1C is the best it has been in years.",
-    "The mental health tracking helped me understand my anxiety patterns. Combined with therapy, I am living more peacefully.",
-    "Post-surgery recovery was smooth with remote monitoring. My doctor knew exactly when I needed adjustments in medication.",
-    "The instant video consultation feature connected me with a specialist in minutes. Incredible service and care.",
-    "Having my medical history and AI analysis in one place made my emergency room visit so much more efficient."
-  ];
-
-  const stories = [];
-  for (let i = 0; i < 5; i++) {
-    const isMale = Math.random() > 0.5;
-    const firstName = isMale ? firstNamesM[Math.floor(Math.random() * firstNamesM.length)] : firstNamesF[Math.floor(Math.random() * firstNamesF.length)];
-    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    
-    const imageId = Math.floor(Math.random() * 90) + 1;
-    const gender = isMale ? 'men' : 'women';
-    const image = `https://randomuser.me/api/portraits/${gender}/${imageId}.jpg`;
-
-    stories.push({
-      id: i + 1,
-      name: `${firstName} ${lastName}`,
-      city: cities[Math.floor(Math.random() * cities.length)],
-      quote: quotes[Math.floor(Math.random() * quotes.length)],
-      condition: conditions[Math.floor(Math.random() * conditions.length)],
-      image,
-      avatarInitials: `${firstName[0]}${lastName[0]}`,
-      doctor: doctors[Math.floor(Math.random() * doctors.length)],
-      hospital: hospitals[Math.floor(Math.random() * hospitals.length)],
-      rating: Math.random() > 0.8 ? 4 : 5,
-      age: Math.floor(Math.random() * 50) + 20
-    });
-  }
-  return stories;
-};
-
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [bookingMode, setBookingMode] = useState<'online' | 'offline'>('offline');
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
-  const [successStories] = useState(() => generateRandomStories());
   const [weatherData, setWeatherData] = useState<any>(null);
-  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<MedicalInsight | null>(null);
   const [showArticleModal, setShowArticleModal] = useState(false);
   const [insightCategory, setInsightCategory] = useState<string | null>(null);
@@ -157,28 +109,6 @@ export const Home: React.FC = () => {
       })
       .catch(err => console.error("Failed to load news:", err));
   }, []);
-
-  useEffect(() => {
-    if (isCarouselPaused) return;
-
-    const interval = setInterval(() => {
-      setCurrentStoryIndex((prev) => (prev + 1) % successStories.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [isCarouselPaused]);
-
-  const nextStory = () => {
-    setCurrentStoryIndex((prev) => (prev + 1) % successStories.length);
-  };
-
-  const prevStory = () => {
-    setCurrentStoryIndex((prev) => (prev - 1 + successStories.length) % successStories.length);
-  };
-
-  const goToStory = (index: number) => {
-    setCurrentStoryIndex(index);
-  };
 
 
   const stats = [
@@ -997,158 +927,6 @@ export const Home: React.FC = () => {
                   <h4 className="font-bold text-neutral-900 dark:text-white">{t('home.features.verified')}</h4>
                   <p className="text-sm text-neutral-600 dark:text-neutral-400">{t('home.features.verifiedDesc')}</p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* Success Stories */}
-      {/* Success Stories - Enhanced Interactive Carousel */}
-      <section
-        className="py-16"
-        onMouseEnter={() => setIsCarouselPaused(true)}
-        onMouseLeave={() => setIsCarouselPaused(false)}
-      >
-        <Container>
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-neutral-900 dark:text-white mb-3">
-              {t('home.stories.title')}
-            </h2>
-            <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
-              {t('home.stories.subtitle')}
-            </p>
-          </div>
-
-          <div className="relative max-w-5xl mx-auto">
-            {/* Navigation Arrows */}
-            <button
-              onClick={prevStory}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-white/90 dark:bg-neutral-800/90 shadow-lg hover:bg-white dark:hover:bg-neutral-800 transition-all hover:scale-110 -translate-x-4"
-              aria-label="Previous story"
-            >
-              <ChevronLeft className="w-6 h-6 text-primary-600" />
-            </button>
-
-            <button
-              onClick={nextStory}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-white/90 dark:bg-neutral-800/90 shadow-lg hover:bg-white dark:hover:bg-neutral-800 transition-all hover:scale-110 translate-x-4"
-              aria-label="Next story"
-            >
-              <ChevronRightIcon className="w-6 h-6 text-primary-600" />
-            </button>
-
-            {/* Carousel Content */}
-            <GlassCard className="p-0 overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              <div className="grid grid-cols-1 lg:grid-cols-2">
-                {/* Patient Image */}
-                <div className="relative h-64 lg:h-auto min-h-[300px]">
-                  <img
-                    src={successStories[currentStoryIndex].image}
-                    alt={successStories[currentStoryIndex].name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent lg:bg-gradient-to-r lg:from-black/40 lg:to-transparent" />
-
-                  {/* Avatar Badge */}
-                  <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                    {successStories[currentStoryIndex].avatarInitials}
-                  </div>
-
-                  {/* City Badge */}
-                  <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3 text-primary-600" />
-                      <span className="text-sm font-medium">{successStories[currentStoryIndex].city}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Story Details */}
-                <div className="p-8 lg:p-10">
-                  {/* Quote Icon */}
-                  <div className="mb-4">
-                    <svg className="w-8 h-8 text-primary-300" fill="currentColor" viewBox="0 0 32 32">
-                      <path d="M10 8v8c0 2.21-1.79 4-4 4H4v-4h2c1.1 0 2-.9 2-2V8c0-2.21 1.79-4 4-4h2v4h-2c-1.1 0-2 .9-2 2zm14 0v8c0 2.21-1.79 4-4 4h-2v-4h2c1.1 0 2-.9 2-2V8c0-2.21 1.79-4 4-4h2v4h-2c-1.1 0-2 .9-2 2z" />
-                    </svg>
-                  </div>
-
-                  {/* Quote */}
-                  <blockquote className="text-xl lg:text-2xl text-neutral-700 dark:text-neutral-300 mb-6 leading-relaxed">
-                    "{successStories[currentStoryIndex].quote}"
-                  </blockquote>
-
-                  {/* Patient Info */}
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-bold text-xl text-neutral-900 dark:text-white">
-                        {successStories[currentStoryIndex].name}
-                      </h4>
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                        {t('home.stories.age')} {successStories[currentStoryIndex].age}
-                      </p>
-                    </div>
-
-                    {/* Condition Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-medium">
-                      <Activity className="w-3 h-3" />
-                      {successStories[currentStoryIndex].condition}
-                    </div>
-
-                    {/* Doctor and Hospital */}
-                    <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                      <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-                        <Users className="w-3 h-3" />
-                        <span className="font-medium">{t('home.stories.treatedBy')}</span> {successStories[currentStoryIndex].doctor}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-500">
-                        <Shield className="w-3 h-3" />
-                        {successStories[currentStoryIndex].hospital}
-                      </div>
-                    </div>
-
-                    {/* Rating */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-0.5">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${i < successStories[currentStoryIndex].rating ? 'text-yellow-500 fill-current' : 'text-neutral-300 dark:text-neutral-700'}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                        {successStories[currentStoryIndex].rating}.0/5.0
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Dots Indicator */}
-            <div className="flex justify-center gap-2 mt-8">
-              {successStories.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToStory(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentStoryIndex
-                    ? 'w-8 bg-primary-600'
-                    : 'bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400 dark:hover:bg-neutral-600'
-                    }`}
-                  aria-label={`Go to story ${index + 1}`}
-                />
-              ))}
-            </div>
-
-            {/* Auto-slide indicator */}
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-                <Clock className="w-3 h-3" />
-                {t('home.stories.autoRotates')}
-                {isCarouselPaused && (
-                  <span className="text-xs text-primary-600 ml-2">{t('home.stories.paused')}</span>
-                )}
               </div>
             </div>
           </div>
