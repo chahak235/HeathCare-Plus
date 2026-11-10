@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+    /* Decorative glows must never cause sideways scrolling ("clip" keeps the sticky navbar working) */
+    html,
+    body {
+        overflow-x: clip;
+    }
+
     :root {
         /* Medical-Grade Design System */
         --navy-deep: #0B1C2D;

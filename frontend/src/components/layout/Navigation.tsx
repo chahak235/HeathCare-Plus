@@ -131,14 +131,14 @@ export const Navigation: React.FC = () => {
                     </div>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center space-x-1">
+                    <div className="hidden xl:flex items-center space-x-1">
                         {visibleNavigation.map((item) => (
                             <NavLink
                                 key={item.nameKey}
                                 to={item.href}
                                 className={({ isActive }) => getNavLinkClassName(isActive)}
                             >
-                                <item.icon className="w-4 h-4 mr-2" />
+                                <item.icon className="hidden 2xl:inline w-4 h-4 mr-2" />
                                 {t(`navigation.${item.nameKey}`)}
                             </NavLink>
                         ))}
@@ -264,7 +264,7 @@ export const Navigation: React.FC = () => {
                         {/* Mobile menu button */}
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                            className="xl:hidden p-2 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                             aria-label="Toggle menu"
                         >
                             {isMenuOpen ? (
@@ -278,7 +278,7 @@ export const Navigation: React.FC = () => {
 
                 {/* Mobile menu */}
                 {isMenuOpen && (
-                    <div className="md:hidden border-t border-neutral-200 dark:border-neutral-800 mt-2 pt-2 pb-3">
+                    <div className="xl:hidden border-t border-neutral-200 dark:border-neutral-800 mt-2 pt-2 pb-3">
                         <div className="px-2 space-y-1">
                             {/* Navigation links */}
                             {visibleNavigation.map((item) => (
