@@ -25,6 +25,8 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
 }) => {
   const tabs: { id: DashboardTab; label: string; badge?: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview' },
+    { id: 'appointments', label: 'Appointments' },
+    { id: 'trust', label: 'Reviews & Access Log' },
     { 
       id: 'beds', 
       label: 'Bed Management',

@@ -16,6 +16,8 @@ import { TriageTab } from './TriageTab';
 import { AmbulancesTab } from './AmbulancesTab';
 import { DoctorsTab } from './DoctorsTab';
 import { AnalyticsTab } from './AnalyticsTab';
+import { AppointmentsTab } from './AppointmentsTab';
+import { TrustTab } from './TrustTab';
 import type { DashboardTab } from './types';
 import type { DoctorStatus } from '../../types/bed.types';
 import { MOCK_TRIAGE_PATIENTS } from '../../mocks/triage';
@@ -200,6 +202,10 @@ export const Dashboard: React.FC = () => {
             onViewDoctorSchedule={handleViewDoctorSchedule}
           />
         )}
+
+        {activeTab === 'appointments' && <AppointmentsTab />}
+
+        {activeTab === 'trust' && <TrustTab />}
 
         {activeTab === 'beds' && <BedsTab />}
 
