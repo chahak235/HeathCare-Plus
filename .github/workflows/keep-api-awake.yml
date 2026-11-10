@@ -1,0 +1,29 @@
+# Render's free plan sleeps after 15 minutes without traffic, and the first
+# visitor then waits 30-60 s. Pinging /health every 10 minutes keeps it awake.
+# One always-on free service uses ~730 of Render's 750 free hours a month.
+# GitHub pauses scheduled workflows after 60 days with no commits; re-enable
+# it in the Actions tab if that happens.
+name: Keep API awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping API health check
+        env:
+          API_HEALTH_URL: ${{ vars.API_HEALTH_URL || 'https://healthcare-plus-api-qpj5.onrender.com/health' }}
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$API_HEALTH_URL" || true)
+            echo "Attempt $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "API did not answer with 200"
+          exit 1
