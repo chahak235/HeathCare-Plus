@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Container } from '../components/layout/Container';
@@ -6,7 +6,6 @@ import { GlassCard } from '../components/layout/GlassCard';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { ImageAnalysisModal } from '../components/features/ImageAnalysisModal';
 import { 
   Brain,
   MessageSquare,
@@ -36,7 +35,9 @@ import {
 export const Features: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [showImageAnalysis, setShowImageAnalysis] = useState(false); // Add this state
+  // The analyzer page (/analysis) runs the real X-ray model in the browser and
+  // matches the site theme; the old demo modal (with fake Wound/General types) is gone.
+  const openImageAnalysis = () => navigate('/analysis');
 
   const mainFeatures = [
     {
@@ -51,7 +52,7 @@ export const Features: React.FC = () => {
         t('featuresPage.featuresList.image.h4')
       ],
       isComingSoon: false,
-      onTryNow: () => setShowImageAnalysis(true)
+      onTryNow: openImageAnalysis
     },
     {
       id: 'chat-assistant',
@@ -179,11 +180,6 @@ export const Features: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
-      {/* Add the modal */}
-      <ImageAnalysisModal 
-        isOpen={showImageAnalysis} 
-        onClose={() => setShowImageAnalysis(false)} 
-      />
 
       <Container>
         {/* Hero Section */}
@@ -220,7 +216,7 @@ export const Features: React.FC = () => {
                 </p>
               </div>
               <Button 
-                onClick={() => setShowImageAnalysis(true)}
+                onClick={openImageAnalysis}
                 size="lg"
                 variant="primary"
                 leftIcon={<Camera className="w-5 h-5" />}
