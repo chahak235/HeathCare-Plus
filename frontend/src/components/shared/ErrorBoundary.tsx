@@ -29,6 +29,23 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('Unhandled error caught by ErrorBoundary:', error, info.componentStack);
+
+    // A tab that stays open across a new deploy (or a dev-server reload) asks
+    // for code files that no longer exist. Reloading once fetches the current
+    // version; the session flag stops a reload loop if the error is real.
+    const stale = /dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk|Outdated Optimize Dep|error loading dynamically/i;
+    if (stale.test(`${error?.name} ${error?.message}`)) {
+      try {
+        const key = 'hc_stale_reload_at';
+        const last = Number(sessionStorage.getItem(key) || 0);
+        if (Date.now() - last > 30_000) {
+          sessionStorage.setItem(key, String(Date.now()));
+          window.location.reload();
+        }
+      } catch {
+        /* storage blocked: fall back to the manual Reload button */
+      }
+    }
   }
 
   render() {
