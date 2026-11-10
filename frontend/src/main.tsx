@@ -4,6 +4,9 @@ import App from './App';
 import 'leaflet/dist/leaflet.css';
 import './styles/globals.css';
 import './i18n/config';
+import { installAuthHeader } from './services/auth-header';
+
+installAuthHeader();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

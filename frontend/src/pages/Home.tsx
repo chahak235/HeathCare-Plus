@@ -1,4 +1,5 @@
 
+import { authHeaders } from '../services/auth-header';
 import { useNavigate } from 'react-router-dom';
 import { medicalInsights, type MedicalInsight } from '../mocks/medicalInsights';
 import { Container } from '../components/layout/Container';
@@ -242,13 +243,13 @@ export const Home: React.FC = () => {
       const load = async () => {
         setLoadingAppointments(true);
         try {
-          const patientRes = await fetch(`${API_URL}/appointments/patient-for-user/${user.id}`);
+          const patientRes = await fetch(`${API_URL}/appointments/patient-for-user/${user.id}`, { headers: authHeaders() });
           if (!patientRes.ok) return;
           const patientJson = await patientRes.json();
           const patientId = patientJson?.data?.patientId ?? patientJson?.data?.id;
           if (!patientId) return;
 
-          const apptRes = await fetch(`${API_URL}/appointments/patient/${patientId}`);
+          const apptRes = await fetch(`${API_URL}/appointments/patient/${patientId}`, { headers: authHeaders() });
           const apptJson = await apptRes.json();
           const raw: any[] = apptJson?.data || [];
 
