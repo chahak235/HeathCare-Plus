@@ -188,6 +188,11 @@ app.get('/health', (req: Request, res: Response) => {
     version: process.env.npm_package_version,
   });
 });
+
+// Render (and people opening the API address) probe "/": answer instead of logging a 404 error
+app.get('/', (_req, res) => {
+  res.json({ name: 'HealthCare+ API', status: 'ok', health: '/health', docs: '/api-docs' });
+});
 console.log('29. Health check endpoint added');
 
 // API Documentation
