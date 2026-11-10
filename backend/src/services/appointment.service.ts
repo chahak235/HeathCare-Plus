@@ -95,6 +95,15 @@ export class AppointmentService {
   async createAppointment(
     data: CreateAppointmentDto
   ): Promise<AppointmentWithDetails & { calendarEventCreated: boolean; emailsSent: { patient: boolean; doctor: boolean } }> {
+    // symptoms is a text[] column: accept a comma-separated string too, so a
+    // client sending plain text gets a booking instead of a database error.
+    const rawSymptoms = data.symptoms as unknown;
+    if (typeof rawSymptoms === 'string') {
+      data.symptoms = rawSymptoms.split(',').map((s) => s.trim()).filter(Boolean);
+    } else if (rawSymptoms != null && !Array.isArray(rawSymptoms)) {
+      data.symptoms = [];
+    }
+
     // Validate patient exists
     const patient = await this.patientRepository.findOne({
       where: { id: data.patientId },
