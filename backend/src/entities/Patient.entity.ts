@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, JoinColumn, OneToOne
 import { Appointment } from './Appointment.entity';
 import { Admission } from './Admission.entity';
 import { User } from './User.entity';
+import { encryptedJson, encryptedText, encryptedTextArray } from '../utils/field-crypto';
 
 @Entity('patients')
 export class Patient {
@@ -17,16 +18,16 @@ export class Patient {
   @Column({ name: 'blood_group', length: 5, nullable: true })
   bloodGroup: string;
 
-  @Column('text', { array: true, nullable: true })
+  @Column('text', { array: true, nullable: true, transformer: encryptedTextArray })
   allergies: string[];
 
-  @Column({ name: 'chronic_conditions', type: 'text', array: true, nullable: true })
+  @Column({ name: 'chronic_conditions', type: 'text', array: true, nullable: true, transformer: encryptedTextArray })
   chronicConditions: string[];
 
-  @Column({ name: 'current_medications', type: 'text', array: true, nullable: true })
+  @Column({ name: 'current_medications', type: 'text', array: true, nullable: true, transformer: encryptedTextArray })
   currentMedications: string[];
 
-  @Column({ name: 'emergency_contact', type: 'jsonb', nullable: true })
+  @Column({ name: 'emergency_contact', type: 'jsonb', nullable: true, transformer: encryptedJson })
   emergencyContact: any;
 
   @Column({ length: 20, nullable: true })
@@ -39,14 +40,14 @@ export class Patient {
   weightKg: number;
 
   /** Family / emergency contacts: [{ name, relation, phone, email }] */
-  @Column({ name: 'emergency_contacts', type: 'jsonb', nullable: true })
+  @Column({ name: 'emergency_contacts', type: 'jsonb', nullable: true, transformer: encryptedJson })
   emergencyContacts: { name: string; relation?: string; phone: string; email?: string }[];
 
   /** The hospital the patient usually visits: { name, phone, address, lat, lng } */
-  @Column({ name: 'preferred_hospital', type: 'jsonb', nullable: true })
+  @Column({ name: 'preferred_hospital', type: 'jsonb', nullable: true, transformer: encryptedJson })
   preferredHospital: { name: string; phone?: string; address?: string; lat?: number; lng?: number } | null;
 
-  @Column({ name: 'medical_notes', type: 'text', nullable: true })
+  @Column({ name: 'medical_notes', type: 'text', nullable: true, transformer: encryptedText })
   medicalNotes: string;
 
   @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
