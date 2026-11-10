@@ -27,7 +27,9 @@
     "db:fix-password": "node scripts/fix-patient-password.js",
     "google-auth": "ts-node src/scripts/get-google-refresh-token.ts",
     "build": "tsc",
-    "test-email": "ts-node src/scripts/send-test-email.ts"
+    "test-email": "ts-node src/scripts/send-test-email.ts",
+    "encrypt-existing": "ts-node src/scripts/encrypt-existing.ts",
+    "make-admin": "ts-node src/scripts/make-admin.ts"
   },
   "keywords": [
     "healthcare",
