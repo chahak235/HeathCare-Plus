@@ -25,7 +25,7 @@ const Privacy: React.FC = () => (
             <li><strong>Appointments:</strong> doctor, date and time, online or in-clinic, symptoms you type, and the Google Meet link for online visits.</li>
             <li><strong>Doctors:</strong> profile, qualifications, fees, working days and hours.</li>
             <li><strong>Location:</strong> only when you press SOS or search for hospitals near you, and only with your browser's permission.</li>
-            <li><strong>Voice recordings</strong> you choose to analyse, and <strong>chat messages</strong> you send to the AI assistant.</li>
+            <li><strong>Voice recordings</strong> and <strong>skin photos</strong> you choose to analyse, and <strong>chat messages</strong> you send to the AI assistant.</li>
           </ul>
         ),
       },
@@ -46,7 +46,7 @@ const Privacy: React.FC = () => (
             <li>To run your account and show you your bookings.</li>
             <li>To book appointments, create the Google Meet link and calendar invite, and email confirmations to you and your doctor.</li>
             <li>To alert your emergency contacts by email, with your location and health details, when you press SOS.</li>
-            <li>To answer your questions with AI and produce the voice wellbeing report.</li>
+            <li>To answer your questions with AI, produce the voice wellbeing report, and suggest likely skin conditions from a photo.</li>
           </ul>
           ),
       },
@@ -60,6 +60,7 @@ const Privacy: React.FC = () => (
               <li><strong>Render</strong> (application server) and <strong>Vercel</strong> (website hosting).</li>
               <li><strong>Groq</strong> (AI): chat messages and voice recordings are sent to Groq to generate replies, transcripts and reports. We do not store voice recordings.</li>
               <li><strong>Google</strong> (Calendar, Meet and Gmail): appointment details and attendee emails for calendar invites, and the emails we send you.</li>
+              <li><strong>Hugging Face</strong> (skin model hosting): skin photos are analysed there and not stored.</li>
               <li><strong>OpenStreetMap</strong> services: the place or location you search, to list hospitals.</li>
             </ul>
             <p>We do not sell your data or use it for advertising.</p>
