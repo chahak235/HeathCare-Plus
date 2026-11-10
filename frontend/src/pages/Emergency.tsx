@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, MessageSquare, MapPin, Navigation, Loader2, Siren, HeartPulse, CheckCircle2, AlertCircle, Building2, Users, Settings } from 'lucide-react';
+import { Phone, MessageSquare, MapPin, Navigation, Loader2, Siren, HeartPulse, CheckCircle2, AlertCircle, Building2, Users, Settings, Volume2, VolumeX } from 'lucide-react';
 import { Container } from '../components/layout/Container';
 import { useAuth } from '../contexts/AuthContext';
 import { emergencyService, HealthProfile, cacheProfile, cachedProfile, telHref } from '../services/emergency-service';
 import { FoundHospital, directionsUrl, hospitalsNear } from '../services/hospital-finder';
+import { startSiren, stopSiren } from '../services/siren';
 
 type Stage = 'ready' | 'locating' | 'active';
 
@@ -17,13 +18,21 @@ const Emergency: React.FC = () => {
   const [hospitals, setHospitals] = useState<FoundHospital[] | null>(null);
   const [alertStatus, setAlertStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [sirenOn, setSirenOn] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     emergencyService.getProfile(token).then((p) => { setProfile(p); cacheProfile(p); }).catch(() => undefined);
   }, [token]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => { abortRef.current?.abort(); stopSiren(); }, []);
+
+  // Loud alarm so people nearby notice; runs up to 2 minutes or until stopped
+  const toggleSiren = () => {
+    if (sirenOn) { stopSiren(); setSirenOn(false); return; }
+    setSirenOn(startSiren());
+    window.setTimeout(() => setSirenOn(false), 120_000);
+  };
 
   const mapsLink = pos ? `https://www.google.com/maps?q=${pos.lat},${pos.lng}` : null;
   const name = profile?.name || user?.name || 'I';
@@ -36,6 +45,9 @@ const Emergency: React.FC = () => {
   const nearest = hospitals?.[0] || null;
 
   const activate = () => {
+    // Started inside the tap, so the browser allows the sound
+    setSirenOn(startSiren());
+    window.setTimeout(() => setSirenOn(false), 120_000);
     setStage('locating');
     setLocationError(null);
     setAlertStatus(null);
@@ -102,7 +114,7 @@ const Emergency: React.FC = () => {
               >
                 <Siren className="w-14 h-14" />
                 <span className="text-2xl font-bold">SOS</span>
-                <span className="text-xs opacity-90">Find hospital & alert family</span>
+                <span className="text-xs opacity-90">Alarm · find hospital · alert family</span>
               </button>
             </div>
           )}
@@ -111,6 +123,17 @@ const Emergency: React.FC = () => {
             <div className="flex items-center justify-center gap-2 text-neutral-700 dark:text-neutral-300 py-10">
               <Loader2 className="w-6 h-6 animate-spin" /> Getting your location…
             </div>
+          )}
+
+          {stage !== 'ready' && (
+            <button
+              type="button"
+              onClick={toggleSiren}
+              aria-pressed={sirenOn}
+              className={`${callButton} w-full mb-5 ${sirenOn ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' : 'border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+            >
+              {sirenOn ? <><VolumeX className="w-5 h-5" /> Stop alarm sound</> : <><Volume2 className="w-5 h-5" /> Sound alarm</>}
+            </button>
           )}
 
           {stage === 'active' && (
