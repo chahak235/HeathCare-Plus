@@ -22,7 +22,11 @@ import appointmentRoutes from './routes/appointment.routes';
 import emergencyRoutes from './routes/emergency.routes';
 import { AlertService } from './services/alert.service'; // ✅ ADD THIS
 
+import { assertProductionSecrets } from './config/secrets';
 console.log('1. Imports started...');
+// Refuse to start in production with a missing/placeholder login secret
+assertProductionSecrets();
+
 console.log('1.5 Initializing database connection...');
 
 AppDataSource.initialize()
@@ -101,6 +105,7 @@ import newsletterRoutes from './routes/newsletter.routes';
 console.log('18.7. newsletterRoutes imported');
 
 import hospitalAdminRoutes from './routes/hospitalAdmin.routes';
+import { clinicalStaff, hospitalStaff, readPublicWriteHospital, loggedIn } from './middleware/staff-guards';
 console.log('18.8. hospitalAdminRoutes imported');
 
 console.log('✅ All imports successful');
@@ -196,7 +201,8 @@ console.log(`31. Using API prefix: ${apiPrefix}`);
 app.use(`${apiPrefix}/auth`, authRoutes);
 console.log('32. Auth routes mounted');
 
-app.use(`${apiPrefix}/patients`, patientRoutes);
+// Patient records and hospital operations need a staff login
+app.use(`${apiPrefix}/patients`, clinicalStaff as any, patientRoutes);
 console.log('33. Patient routes mounted');
 
 app.use(`${apiPrefix}/images`, imageRoutes);
@@ -211,13 +217,13 @@ console.log('36. Chat routes mounted');
 app.use(`${apiPrefix}/dashboard`, dashboardRoutes);
 console.log('37. Dashboard routes mounted');
 
-app.use(`${apiPrefix}/allocation`, allocationRoutes);
+app.use(`${apiPrefix}/allocation`, hospitalStaff as any, allocationRoutes);
 console.log('38. Allocation routes mounted');
 
-app.use(`${apiPrefix}/beds`, bedsRoutes);
+app.use(`${apiPrefix}/beds`, readPublicWriteHospital as any, bedsRoutes);
 console.log('39. Beds routes mounted');
 
-app.use(`${apiPrefix}/patients-api`, patientApiRoutes);
+app.use(`${apiPrefix}/patients-api`, clinicalStaff as any, patientApiRoutes);
 console.log('40. Patient API routes mounted');
 
 app.use(`${apiPrefix}/doctors`, doctorsRoutes);
@@ -229,13 +235,13 @@ console.log('41.5. Hospitals routes mounted');
 app.use(`${apiPrefix}/newsletter`, newsletterRoutes);
 console.log('41.7. Newsletter routes mounted');
 
-app.use(`${apiPrefix}/hospitals`, hospitalAdminRoutes);
+app.use(`${apiPrefix}/hospitals`, readPublicWriteHospital as any, hospitalAdminRoutes);
 console.log('41.8. Hospital admin routes mounted');
 
 app.use(`${apiPrefix}/auth/google`, googleAuthRoutes);
 console.log('41.6. Google auth routes mounted');
 
-app.use(`${apiPrefix}/notifications`, notificationRoutes);
+app.use(`${apiPrefix}/notifications`, loggedIn as any, notificationRoutes);
 console.log('42. Notification routes mounted');
 
 app.use(`${apiPrefix}/voice`, voiceRoutes);
