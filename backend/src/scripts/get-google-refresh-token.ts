@@ -2,14 +2,18 @@
  * One-time setup: connect the clinic's Google account so the backend can put
  * appointments on Google Calendar and create Google Meet links.
  *
- * 1. In Google Cloud Console, create an OAuth client (type "Web application")
- *    and add this redirect URI: http://localhost:3005/oauth2callback
+ * 1. In Google Cloud Console, create an OAuth client of type "Desktop app"
+ *    (Desktop clients accept any http://localhost port, so no redirect URI is needed).
+ *    A "Web application" client also works if you add http://localhost:3005/oauth2callback.
  * 2. Put GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend/.env
  * 3. Run: npm run google-auth
  * 4. Open the printed link, sign in with the clinic's Google account, allow access
- * 5. Copy the printed GOOGLE_PLATFORM_REFRESH_TOKEN line into backend/.env
+ * 5. The refresh token is written to backend/.env as GOOGLE_PLATFORM_REFRESH_TOKEN
+ *    (it is never printed). Pass --print to print it instead, e.g. for Render.
  */
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
 import http from 'http';
 import { google } from 'googleapis';
 
@@ -29,6 +33,16 @@ const url = client.generateAuthUrl({
   scope: ['https://www.googleapis.com/auth/calendar.events'],
 });
 
+/** Set KEY=value in backend/.env, replacing an existing KEY line or appending one. */
+function saveToEnv(key: string, value: string) {
+  const envPath = path.resolve(__dirname, '../../.env');
+  const text = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+  const line = `${key}=${value}`;
+  const re = new RegExp(`^${key}=.*$`, 'm');
+  const next = re.test(text) ? text.replace(re, () => line) : `${text.replace(/\s*$/, '')}\n${line}\n`;
+  fs.writeFileSync(envPath, next);
+}
+
 const server = http.createServer(async (req, res) => {
   const reqUrl = new URL(req.url || '/', REDIRECT);
   if (reqUrl.pathname !== '/oauth2callback') {
@@ -46,8 +60,13 @@ const server = http.createServer(async (req, res) => {
     if (!tokens.refresh_token) {
       console.error('\nGoogle did not return a refresh token. Remove the app at https://myaccount.google.com/permissions and run this again.');
     } else {
-      console.log('\nAdd this line to backend/.env (keep it secret):\n');
-      console.log(`GOOGLE_PLATFORM_REFRESH_TOKEN=${tokens.refresh_token}\n`);
+      if (process.argv.includes('--print')) {
+        console.log('\nAdd this line to backend/.env (keep it secret):\n');
+        console.log(`GOOGLE_PLATFORM_REFRESH_TOKEN=${tokens.refresh_token}\n`);
+      } else {
+        saveToEnv('GOOGLE_PLATFORM_REFRESH_TOKEN', tokens.refresh_token);
+        console.log('\nSaved GOOGLE_PLATFORM_REFRESH_TOKEN to backend/.env. Restart the backend to use it.');
+      }
     }
   } catch (err) {
     res.writeHead(500).end('Failed to get tokens. See the terminal.');
