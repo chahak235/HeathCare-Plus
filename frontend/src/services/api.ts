@@ -1,12 +1,12 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 // Get API URL from environment or use default
-let API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Ensure API_URL is a valid URL
 if (!API_URL.startsWith('http://') && !API_URL.startsWith('https://')) {
     console.warn('Invalid API_URL format, using default:', API_URL);
-    API_URL = 'https://healthcare-backend-tylz.onrender.com/api';
+    API_URL = 'http://localhost:3001/api';
 }
 
 // Log API URL in development

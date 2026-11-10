@@ -9,7 +9,7 @@ import axios from 'axios';
 import { useRealtime } from '../../contexts/RealtimeContext';
 import realtimeService from '../../services/realtime.service';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface Appointment {
   id: number;

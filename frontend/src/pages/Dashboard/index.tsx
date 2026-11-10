@@ -23,7 +23,7 @@ import { MOCK_AMBULANCES } from '../../mocks/ambulances';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Beds and doctors below are your real data. Triage and ambulance tracking
 // are genuine, sophisticated UI built ahead of the backend that would feed

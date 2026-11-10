@@ -238,7 +238,7 @@ export const Home: React.FC = () => {
     useEffect(() => {
       if (!isAuthenticated || !user) return;
 
-      const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
       const load = async () => {
         setLoadingAppointments(true);
@@ -615,7 +615,7 @@ export const Home: React.FC = () => {
 
   const handleNewsletterSubmit = async () => {
     if (!newsletterEmail || !newsletterEmail.includes('@')) return;
-    const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     try {
       const res = await fetch(`${API_URL}/newsletter/subscribe`, {
         method: 'POST',
