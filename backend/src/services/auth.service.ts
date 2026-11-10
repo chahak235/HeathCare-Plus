@@ -28,6 +28,14 @@ export class AuthService {
         };
       }
 
+      // Admin accounts are never created by sign-up (use `npm run make-admin`).
+      // Doctor and hospital accounts start unverified: they get access to other
+      // people's records only after an admin approves them.
+      const role = userData.role || 'patient';
+      if (!['patient', 'doctor', 'hospital'].includes(role)) {
+        return { success: false, error: 'Choose patient, doctor or hospital as the account type.' };
+      }
+
       // Hash password
       const hashedPassword = await bcrypt.hash(userData.password, 10);
 
@@ -37,8 +45,8 @@ export class AuthService {
         email: userData.email,
         phone: userData.phone,
         password: hashedPassword,
-        role: userData.role || 'patient',
-        isVerified: true // Auto-verify for now (add email verification later)
+        role,
+        isVerified: role === 'patient'
       });
 
       await this.userRepository.save(user);
