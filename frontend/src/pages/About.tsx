@@ -9,12 +9,9 @@ import {
   Target,
   Eye,
   Users,
-  Award,
   Globe,
   TrendingUp,
   Shield,
-  Zap,
-  Star,
   Clock,
   CheckCircle
 } from 'lucide-react';
@@ -224,51 +221,6 @@ export const About: React.FC = () => {
             ))}
           </div>
         </div>
-
-        {/* Awards & Recognition */}
-        <GlassCard className="p-8 mb-16">
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-white mb-8 text-center">
-            {t('aboutPage.awardsTitle')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center p-6">
-              <Award className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-              <h4 className="font-bold text-neutral-900 dark:text-white mb-2">
-                {t('aboutPage.awards.healthtech.title')}
-              </h4>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {t('aboutPage.awards.healthtech.desc')}
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <Shield className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <h4 className="font-bold text-neutral-900 dark:text-white mb-2">
-                {t('aboutPage.awards.hipaa.title')}
-              </h4>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {t('aboutPage.awards.hipaa.desc')}
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <Zap className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-              <h4 className="font-bold text-neutral-900 dark:text-white mb-2">
-                {t('aboutPage.awards.ai.title')}
-              </h4>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {t('aboutPage.awards.ai.desc')}
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <Star className="w-12 h-12 text-purple-500 mx-auto mb-4" />
-              <h4 className="font-bold text-neutral-900 dark:text-white mb-2">
-                {t('aboutPage.awards.startup.title')}
-              </h4>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                {t('aboutPage.awards.startup.desc')}
-              </p>
-            </div>
-          </div>
-        </GlassCard>
 
         {/* Call to Action */}
         <div className="text-center">

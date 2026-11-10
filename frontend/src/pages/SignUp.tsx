@@ -638,11 +638,11 @@ export const SignUp: React.FC = () => {
                       />
                       <label htmlFor="agreeToTerms" className="text-sm text-neutral-700 dark:text-neutral-300">
                         I agree to the{' '}
-                        <a href="/terms" className="text-primary-600 hover:text-primary-700 font-medium">
+                        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:text-primary-700 font-medium">
                           Terms of Service
                         </a>
                         {' '}and{' '}
-                        <a href="/privacy" className="text-primary-600 hover:text-primary-700 font-medium">
+                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:text-primary-700 font-medium">
                           Privacy Policy
                         </a>
                         . I understand that my data will be used to provide personalized healthcare services.
@@ -714,7 +714,7 @@ export const SignUp: React.FC = () => {
                     <div>
                       <h4 className="font-medium text-neutral-900 dark:text-white">Secure & Private</h4>
                       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                        HIPAA-compliant data storage with end-to-end encryption
+                        Encrypted connections, and only you and your doctors can see your records
                       </p>
                     </div>
                   </div>
@@ -736,12 +736,12 @@ export const SignUp: React.FC = () => {
               {/* Security Badges */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-center">
-                  <div className="text-2xl font-bold text-primary-600">256-bit</div>
-                  <div className="text-xs text-neutral-600 dark:text-neutral-400">Encryption</div>
+                  <div className="text-2xl font-bold text-primary-600">HTTPS</div>
+                  <div className="text-xs text-neutral-600 dark:text-neutral-400">Encrypted connection</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-center">
-                  <div className="text-2xl font-bold text-primary-600">HIPAA</div>
-                  <div className="text-xs text-neutral-600 dark:text-neutral-400">Compliant</div>
+                  <div className="text-2xl font-bold text-primary-600">DPDP</div>
+                  <div className="text-xs text-neutral-600 dark:text-neutral-400">Follows India's data law</div>
                 </div>
               </div>
 
