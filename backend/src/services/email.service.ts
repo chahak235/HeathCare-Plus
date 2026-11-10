@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { google } from 'googleapis';
 import { EmailNotification } from '../types/notification.types';
 
 export class EmailService {
@@ -6,12 +7,33 @@ export class EmailService {
   private transporterReady: Promise<void>;
   private defaultFrom: string = 'noreply@healthcareplus.demo';
   private isTestAccount = false;
+  // Gmail API client when EMAIL_TRANSPORT=gmail-api (hosts like Render's free plan block SMTP ports)
+  private gmail: ReturnType<typeof google.gmail> | null = null;
 
   constructor() {
     this.transporterReady = this.initTransporter();
   }
 
   private async initTransporter(): Promise<void> {
+    // Send over HTTPS with the Gmail API when the host blocks SMTP (Render free plan).
+    // Uses the same Google OAuth client as Calendar; the refresh token needs the gmail.send scope.
+    if (process.env.EMAIL_TRANSPORT === 'gmail-api') {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const refreshToken = process.env.GOOGLE_GMAIL_REFRESH_TOKEN || process.env.GOOGLE_PLATFORM_REFRESH_TOKEN;
+      if (clientId && clientSecret && refreshToken) {
+        const auth = new google.auth.OAuth2(clientId, clientSecret);
+        auth.setCredentials({ refresh_token: refreshToken });
+        this.gmail = google.gmail({ version: 'v1', auth });
+        // Builds the full message (HTML, .ics attachment) without sending; the Gmail API sends it
+        this.transporter = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'unix' });
+        this.defaultFrom = process.env.EMAIL_FROM || (process.env.SMTP_USER as string) || 'me';
+        console.log('📧 Email service using the Gmail API');
+        return;
+      }
+      console.warn('📧 EMAIL_TRANSPORT=gmail-api but Google OAuth settings are missing; falling back to SMTP.');
+    }
+
     const hasRealSmtp = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
 
     if (hasRealSmtp) {
@@ -23,6 +45,10 @@ export class EmailService {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
+        // Fail fast instead of hanging a booking when the SMTP port is blocked
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
       });
       this.defaultFrom = process.env.EMAIL_FROM || (process.env.SMTP_USER as string);
       console.log('📧 Email service using real SMTP:', process.env.SMTP_HOST || 'smtp.gmail.com');
@@ -76,6 +102,14 @@ export class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
+
+      if (this.gmail) {
+        const raw = Buffer.from((info as any).message as Buffer).toString('base64url');
+        const sent = await this.gmail.users.messages.send({ userId: 'me', requestBody: { raw } }, { timeout: 20_000 });
+        console.log(`📧 Email sent via Gmail API: ${sent.data.id}`);
+        return { success: true, messageId: sent.data.id || undefined };
+      }
+
       const previewUrl = this.isTestAccount ? nodemailer.getTestMessageUrl(info) || undefined : undefined;
 
       console.log(`📧 Email sent: ${info.messageId}`);

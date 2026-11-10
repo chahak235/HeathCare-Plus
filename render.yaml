@@ -23,6 +23,9 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # Render's free plan blocks SMTP ports, so mail goes out through the Gmail API
+      - key: EMAIL_TRANSPORT
+        value: gmail-api
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

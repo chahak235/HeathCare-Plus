@@ -30,7 +30,9 @@ const client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RE
 const url = client.generateAuthUrl({
   access_type: 'offline',
   prompt: 'consent',
-  scope: ['https://www.googleapis.com/auth/calendar.events'],
+  // calendar.events: create Meet + invites. gmail.send: send booking/alert emails over
+  // HTTPS on hosts that block SMTP (EMAIL_TRANSPORT=gmail-api).
+  scope: ['https://www.googleapis.com/auth/calendar.events', 'https://www.googleapis.com/auth/gmail.send'],
 });
 
 /** Set KEY=value in backend/.env, replacing an existing KEY line or appending one. */
