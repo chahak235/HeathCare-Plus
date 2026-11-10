@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import MedicalImageUpload from '../components/features/image-upload/MedicalImageUpload';
 import AnalysisResults from '../components/features/analysis-results/AnalysisResults';
 import { xrayModelService, XRAY_MODEL_INFO } from '../services/xray-model-service';
+import { skinModelService, SKIN_MODEL_INFO } from '../services/skin-model-service';
 import { MedicalImage, AnalysisResult, ModelInfo } from '../types/medical-images';
 
 
@@ -31,8 +32,12 @@ const ImageAnalysis: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>([]);
-  const availableModels: ModelInfo[] = [XRAY_MODEL_INFO];
-  const skinModelReady = false; // Skin condition model is coming soon
+  const availableModels: ModelInfo[] = [XRAY_MODEL_INFO, SKIN_MODEL_INFO];
+  // The skin model runs on our server; it is offered once the server says it is reachable
+  const [skinModelReady, setSkinModelReady] = useState(false);
+  useEffect(() => {
+    skinModelService.isAvailable().then(setSkinModelReady);
+  }, []);
 
   useEffect(() => {
     const initialize = async () => {
@@ -67,7 +72,9 @@ const ImageAnalysis: React.FC = () => {
     setAnalysisResult(null);
 
     try {
-      const result = await xrayModelService.analyze(selectedImage);
+      const result = analysisType === 'skin'
+        ? await skinModelService.analyze(selectedImage)
+        : await xrayModelService.analyze(selectedImage);
       setAnalysisResult(result);
 
       // Save to history
@@ -79,7 +86,9 @@ const ImageAnalysis: React.FC = () => {
       generateReport(result);
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      alert("The X-ray model couldn't analyse this image. Check your internet connection for the first load, then try again with a JPG or PNG.");
+      alert(analysisType === 'skin'
+        ? (error?.message || 'Skin analysis failed. Please try again.')
+        : "The X-ray model couldn't analyse this image. Check your internet connection for the first load, then try again with a JPG or PNG.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -174,7 +183,7 @@ Always consult with qualified healthcare professionals for medical diagnosis and
     {
       id: 'skin',
       name: 'Skin Conditions',
-      description: skinModelReady ? 'Moles, rashes, lesions' : 'Coming soon',
+      description: skinModelReady ? '23 conditions: rashes, moles, infections' : 'Unavailable right now',
       icon: <ImageIcon className="w-5 h-5" />,
       color: 'from-orange-500 to-red-500',
       models: availableModels.filter(m => m.specialty.includes('skin')),
@@ -195,7 +204,7 @@ Always consult with qualified healthcare professionals for medical diagnosis and
             </h1>
           </div>
           <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
-            Screen chest X-rays for pneumonia with our own AI model, right in your browser. Skin condition analysis is coming soon.
+            Screen chest X-rays for pneumonia right in your browser, or check a skin photo against 23 common skin conditions.
           </p>
           
           {/* Status Indicators */}
@@ -281,7 +290,11 @@ Always consult with qualified healthcare professionals for medical diagnosis and
                     Upload Medical Image
                   </h2>
                   <p className="text-neutral-600 dark:text-neutral-400">
-                    {analysisType === 'xray' ? 'Upload a clear front-view chest X-ray (JPG or PNG)' : 'Skin condition analysis is coming soon'}
+                    {analysisType === 'xray'
+                      ? 'Upload a clear front-view chest X-ray (JPG or PNG)'
+                      : skinModelReady
+                        ? 'Upload a sharp, well-lit close-up of the affected skin (JPG or PNG)'
+                        : 'Skin analysis is not available right now'}
                   </p>
                 </div>
                 {selectedImage && (
@@ -309,10 +322,12 @@ Always consult with qualified healthcare professionals for medical diagnosis and
                     className="w-full py-4 text-lg"
                     leftIcon={isAnalyzing ? <Clock className="w-5 h-5 animate-spin" /> : <Brain className="w-5 h-5" />}
                   >
-                    {isAnalyzing ? 'Analyzing...' : analysisType === 'xray' ? 'Analyze Chest X-ray' : 'Skin Analysis Coming Soon'}
+                    {isAnalyzing ? 'Analyzing...' : analysisType === 'xray' ? 'Analyze Chest X-ray' : skinModelReady ? 'Analyze Skin Photo' : 'Skin Analysis Unavailable'}
                   </Button>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center mt-3">
-                    {analysisType === 'xray' ? 'Takes a few seconds. The first run downloads the model (about 15 MB).' : 'This model is still being trained.'}
+                    {analysisType === 'xray'
+                      ? 'Takes a few seconds. The first run downloads the model (about 15 MB).'
+                      : 'Your photo is sent to our server, analysed and not stored. Usually under 30 seconds; up to 2 minutes if the model was asleep.'}
                   </p>
                 </div>
               )}
