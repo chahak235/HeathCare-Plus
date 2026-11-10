@@ -26,7 +26,8 @@
     "db:seed": "node scripts/seed-demo-users.js",
     "db:fix-password": "node scripts/fix-patient-password.js",
     "google-auth": "ts-node src/scripts/get-google-refresh-token.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test-email": "ts-node src/scripts/send-test-email.ts"
   },
   "keywords": [
     "healthcare",
