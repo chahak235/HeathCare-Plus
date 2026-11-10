@@ -4,7 +4,9 @@ export type DashboardTab =
   | 'triage' 
   | 'ambulances' 
   | 'doctors' 
-  | 'analytics'; // Add this line
+  | 'analytics'
+  | 'appointments'
+  | 'trust';
 
 export interface EmergencyStats {
   p1Patients: number;
