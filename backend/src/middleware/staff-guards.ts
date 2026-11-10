@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { AuthRequest, authenticate, authorize } from './auth.middleware';
+import { isTrustedStaff } from '../utils/account-status';
 
 /**
  * Route-level guards for the hospital-operations APIs (patients, beds,
@@ -20,11 +21,21 @@ const chain = (...mws: Mw[]): Mw => (req, res, next) => {
   return step();
 };
 
-/** Logged-in clinical staff only: doctors, hospital accounts, admins. */
-export const clinicalStaff: Mw = chain(authenticate as Mw, authorize('doctor', 'hospital', 'admin') as Mw);
+/** Doctor and hospital accounts must be approved by an admin first. */
+const approved: Mw = (req, res, next) => {
+  isTrustedStaff(req.user)
+    .then((ok) => (ok ? next() : res.status(403).json({ success: false, error: 'Your account is waiting for approval by HealthCare+.' })))
+    .catch(next);
+};
 
-/** Logged-in hospital accounts and admins only. */
-export const hospitalStaff: Mw = chain(authenticate as Mw, authorize('hospital', 'admin') as Mw);
+/** Logged-in, approved clinical staff only: doctors, hospital accounts, admins. */
+export const clinicalStaff: Mw = chain(authenticate as Mw, authorize('doctor', 'hospital', 'admin') as Mw, approved);
+
+/** Logged-in, approved hospital accounts and admins only. */
+export const hospitalStaff: Mw = chain(authenticate as Mw, authorize('hospital', 'admin') as Mw, approved);
+
+/** Admins only (account approval). */
+export const adminOnly: Mw = chain(authenticate as Mw, authorize('admin') as Mw);
 
 /** Anyone may read (GET); changes need a hospital or admin login. */
 export const readPublicWriteHospital: Mw = (req, res, next) =>

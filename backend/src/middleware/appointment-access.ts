@@ -4,11 +4,13 @@ import { Patient } from '../entities/Patient.entity';
 import { Doctor } from '../entities/Doctor.entity';
 import { Appointment } from '../entities/Appointment.entity';
 import { AuthRequest } from './auth.middleware';
+import { isApprovedAccount } from '../utils/account-status';
 
 /**
  * Ownership checks for appointment and doctor routes (run after `authenticate`).
  *
- * - Hospital staff and admins may act on any record.
+ * - Admins, and hospital accounts approved by an admin, may act on any record.
+ * - Doctor accounts need admin approval before they can see patients' data.
  * - A patient may only see and book for their own Patient row.
  * - A doctor may only see their own schedule and change their own settings;
  *   doctors may read patient records (they need them for consultations).
@@ -19,7 +21,9 @@ const STAFF = new Set(['hospital', 'admin']);
 const deny = (res: Response, msg = 'You do not have access to this record') =>
   res.status(403).json({ success: false, error: msg });
 
-const isStaff = (req: AuthRequest) => STAFF.has(req.user?.role);
+const isStaff = async (req: AuthRequest) =>
+  req.user?.role === 'admin' || (STAFF.has(req.user?.role) && (await isApprovedAccount(Number(req.user?.id))));
+const isApprovedDoctor = async (req: AuthRequest) => req.user?.role === 'doctor' && (await isApprovedAccount(Number(req.user?.id)));
 const userId = (req: AuthRequest) => Number(req.user?.id);
 
 async function patientOwnedBy(patientId: number, uid: number): Promise<boolean> {
@@ -39,7 +43,7 @@ const wrap =
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.user) return res.status(401).json({ success: false, error: 'Please log in' });
-      if (isStaff(req)) return next();
+      if (await isStaff(req)) return next();
       const ok = await check(req);
       if (ok === true) return next();
       return deny(res, typeof ok === 'string' ? ok : undefined);
@@ -54,14 +58,15 @@ export const ownUserParam = wrap(async (req) => Number(req.params.userId) === us
 
 /** :patientId must be the logged-in patient's own row (doctors may read). */
 export const patientParamReadable = wrap(async (req) => {
-  if (req.user?.role === 'doctor') return true;
+  if (await isApprovedDoctor(req)) return true;
   return patientOwnedBy(Number(req.params.patientId), userId(req));
 });
 
 /** :doctorId (or :id on doctor routes) must belong to the logged-in doctor. */
-export const ownDoctorParam = wrap(async (req) =>
-  doctorOwnedBy(Number(req.params.doctorId ?? req.params.id), userId(req))
-);
+export const ownDoctorParam = wrap(async (req) => {
+  if (!(await doctorOwnedBy(Number(req.params.doctorId ?? req.params.id), userId(req)))) return false;
+  return (await isApprovedAccount(userId(req))) || 'Your doctor account is waiting for approval by HealthCare+.';
+});
 
 /** Booking body: patients book only for themselves. */
 export const canBookForBodyPatient = wrap(async (req) => {
@@ -77,8 +82,9 @@ export const partyToAppointment = wrap(async (req) => {
   });
   if (!appt) return 'Appointment not found';
   const uid = userId(req);
-  return (await patientOwnedBy(Number(appt.patientId), uid)) || (await doctorOwnedBy(Number(appt.doctorId), uid));
+  if (await patientOwnedBy(Number(appt.patientId), uid)) return true;
+  return (await doctorOwnedBy(Number(appt.doctorId), uid)) && (await isApprovedAccount(uid));
 });
 
 /** Staff and doctors only (e.g. the clinic-wide upcoming list). */
-export const doctorOrStaff = wrap(async (req) => req.user?.role === 'doctor');
+export const doctorOrStaff = wrap(async (req) => isApprovedDoctor(req));
