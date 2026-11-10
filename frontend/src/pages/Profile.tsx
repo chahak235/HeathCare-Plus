@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import HealthProfileForm from '../components/emergency/HealthProfileForm';
+import { emergencyService, HealthProfile } from '../services/emergency-service';
+import realtimeService from '../services/realtime.service';
 import { Container } from '../components/layout/Container';
 import { GlassCard } from '../components/layout/GlassCard';
 import { Button } from '../components/ui/Button';
@@ -35,9 +37,36 @@ interface UserProfile {
 
 export const Profile: React.FC = () => {
     const navigate = useNavigate();
-    const { user: authUser, logout } = useAuth();
+    const { user: authUser, logout, token } = useAuth();
     const user = authUser as unknown as UserProfile | null;
     const loading = false;
+
+    // Real data for the patient: health profile (for BMI) and their bookings
+    const [health, setHealth] = useState<HealthProfile | null>(null);
+    const [appointments, setAppointments] = useState<any[] | null>(null);
+
+    useEffect(() => {
+        if (!user || user.role !== 'patient' || !token) return;
+        emergencyService.getProfile(token).then(setHealth).catch(() => setHealth(null));
+        realtimeService
+            .getPatientForUser(user.id)
+            .then((r) => (r?.data?.patientId ? realtimeService.getPatientAppointments(r.data.patientId) : { data: [] }))
+            .then((r) => setAppointments(Array.isArray(r?.data) ? r.data : []))
+            .catch(() => setAppointments([]));
+    }, [user?.id, user?.role, token]);
+
+    const bmi = health?.heightCm && health?.weightKg
+        ? (health.weightKg / Math.pow(health.heightCm / 100, 2)).toFixed(1)
+        : null;
+    const now = Date.now();
+    const sortedAppointments = (appointments || [])
+        .slice()
+        .sort((a, b) => new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime());
+    const upcomingCount = (appointments || []).filter(
+        (a) => new Date(a.scheduledTime).getTime() > now && !['cancelled', 'completed'].includes(a.status)
+    ).length;
+    const fmtWhen = (iso: string) =>
+        new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 
     const handleLogout = () => {
         logout();
@@ -155,28 +184,28 @@ export const Profile: React.FC = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="text-center p-4 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
                                         <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-                                            {user.age || '--'}
+                                            {health?.heightCm ? `${health.heightCm} cm` : '--'}
                                         </div>
-                                        <div className="text-sm text-neutral-600 dark:text-neutral-400">Age</div>
+                                        <div className="text-sm text-neutral-600 dark:text-neutral-400">Height</div>
                                     </div>
 
                                     <div className="text-center p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
                                         <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-                                            {user.gender || '--'}
+                                            {health?.weightKg ? `${health.weightKg} kg` : '--'}
                                         </div>
-                                        <div className="text-sm text-neutral-600 dark:text-neutral-400">Gender</div>
+                                        <div className="text-sm text-neutral-600 dark:text-neutral-400">Weight</div>
                                     </div>
 
                                     <div className="text-center p-4 rounded-xl bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20">
                                         <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-                                            {user.blood_type || '--'}
+                                            {health?.bloodGroup || '--'}
                                         </div>
                                         <div className="text-sm text-neutral-600 dark:text-neutral-400">Blood Type</div>
                                     </div>
 
                                     <div className="text-center p-4 rounded-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20">
                                         <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-                                            --
+                                            {bmi || '--'}
                                         </div>
                                         <div className="text-sm text-neutral-600 dark:text-neutral-400">BMI</div>
                                     </div>
@@ -184,42 +213,49 @@ export const Profile: React.FC = () => {
                             </div>
                         </GlassCard>
 
-                        {/* Recent Activity */}
+                        {/* Recent Activity: the patient's real bookings */}
                         <GlassCard className="p-6">
                             <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-6">
-                                Recent Activity
+                                Your Appointments
                             </h2>
                             <div className="space-y-4">
-                                <div className="flex items-center p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800">
-                                    <Activity className="w-5 h-5 text-primary-600 mr-3" />
-                                    <div className="flex-1">
-                                        <p className="font-medium">Health Check-up Completed</p>
-                                        <p className="text-sm text-neutral-600 dark:text-neutral-400">2 days ago</p>
+                                {appointments === null && user.role === 'patient' && (
+                                    <p className="text-sm text-neutral-500">Loading…</p>
+                                )}
+                                {(user.role !== 'patient' || (appointments && appointments.length === 0)) && (
+                                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                                        No appointments yet.{' '}
+                                        <button type="button" onClick={() => navigate('/doctors')} className="text-primary-600 dark:text-primary-400 font-medium hover:underline">
+                                            Book one
+                                        </button>
                                     </div>
-                                    <Badge>Completed</Badge>
-                                </div>
-
-                                <div className="flex items-center p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800">
-                                    <Calendar className="w-5 h-5 text-green-600 mr-3" />
-                                    <div className="flex-1">
-                                        <p className="font-medium">Appointment with Dr. Smith</p>
-                                        <p className="text-sm text-neutral-600 dark:text-neutral-400">Tomorrow, 10:00 AM</p>
-                                    </div>
-                                    <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                                        Scheduled
-                                    </Badge>
-                                </div>
-
-                                <div className="flex items-center p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800">
-                                    <Heart className="w-5 h-5 text-red-600 mr-3" />
-                                    <div className="flex-1">
-                                        <p className="font-medium">Prescription Refill</p>
-                                        <p className="text-sm text-neutral-600 dark:text-neutral-400">Due in 5 days</p>
-                                    </div>
-                                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                                        Pending
-                                    </Badge>
-                                </div>
+                                )}
+                                {sortedAppointments.slice(0, 5).map((a) => {
+                                    const upcoming = new Date(a.scheduledTime).getTime() > now && a.status !== 'cancelled';
+                                    return (
+                                        <div key={a.id} className="flex items-center p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800">
+                                            <Calendar className={`w-5 h-5 mr-3 ${upcoming ? 'text-primary-600' : 'text-neutral-400'}`} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium truncate">
+                                                    {a.appointmentType === 'online' ? 'Video consult' : 'Clinic visit'} with {a.doctorName || 'doctor'}
+                                                </p>
+                                                <p className="text-sm text-neutral-600 dark:text-neutral-400">{fmtWhen(a.scheduledTime)} IST</p>
+                                                {upcoming && a.meetingLink && (
+                                                    <a href={a.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
+                                                        Join Google Meet
+                                                    </a>
+                                                )}
+                                            </div>
+                                            <Badge className={a.status === 'cancelled'
+                                                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                                : upcoming
+                                                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'
+                                                    : 'bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300'}>
+                                                {a.status === 'cancelled' ? 'Cancelled' : upcoming ? 'Upcoming' : 'Past'}
+                                            </Badge>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </GlassCard>
                     </div>
@@ -240,15 +276,11 @@ export const Profile: React.FC = () => {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-neutral-600 dark:text-neutral-400">Total Appointments</span>
-                                    <span className="font-medium">5</span>
+                                    <span className="font-medium">{appointments ? appointments.length : '…'}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-neutral-600 dark:text-neutral-400">Health Records</span>
-                                    <span className="font-medium">12</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-neutral-600 dark:text-neutral-400">Prescriptions</span>
-                                    <span className="font-medium">3</span>
+                                    <span className="text-neutral-600 dark:text-neutral-400">Upcoming</span>
+                                    <span className="font-medium">{appointments ? upcomingCount : '…'}</span>
                                 </div>
                             </div>
                         </GlassCard>
@@ -259,13 +291,13 @@ export const Profile: React.FC = () => {
                                 Quick Actions
                             </h3>
                             <div className="space-y-3">
-                                <Button variant="secondary" fullWidth leftIcon={<Calendar className="w-4 h-4" />}>
+                                <Button variant="secondary" fullWidth leftIcon={<Calendar className="w-4 h-4" />} onClick={() => navigate('/doctors')}>
                                     Book Appointment
                                 </Button>
-                                <Button variant="secondary" fullWidth leftIcon={<Activity className="w-4 h-4" />}>
-                                    Health Metrics
+                                <Button variant="secondary" fullWidth leftIcon={<Activity className="w-4 h-4" />} onClick={() => navigate('/analysis')}>
+                                    X-ray Analysis
                                 </Button>
-                                <Button variant="secondary" fullWidth leftIcon={<MapPin className="w-4 h-4" />}>
+                                <Button variant="secondary" fullWidth leftIcon={<MapPin className="w-4 h-4" />} onClick={() => navigate('/map-prediction')}>
                                     Find Hospitals
                                 </Button>
                             </div>
