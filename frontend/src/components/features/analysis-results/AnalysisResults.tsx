@@ -31,8 +31,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <div className="relative">
-          <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <Brain className="w-10 h-10 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+          <div className="w-20 h-20 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+          <Brain className="w-10 h-10 text-primary-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
         </div>
         <p className="mt-6 text-lg font-medium text-gray-700 dark:text-gray-300">
           AI is analyzing your image...
@@ -51,8 +51,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
   };
 
   const typeColors = {
-    doctor: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    medication: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    doctor: 'bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300',
+    medication: 'bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300',
     lifestyle: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     monitoring: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     emergency: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -76,7 +76,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl">
+          <div className="p-3 bg-gradient-to-br from-primary-500 to-primary-500 rounded-xl">
             <Brain className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -116,7 +116,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700 dark:text-gray-300">Confidence Score</h3>
-            <TrendingUp className="w-5 h-5 text-blue-500" />
+            <TrendingUp className="w-5 h-5 text-primary-500" />
           </div>
           <div className="text-center">
             <div className="inline-flex items-baseline">
@@ -128,7 +128,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
             <div className="mt-4">
               <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full transition-all duration-1000"
+                  className="h-full bg-gradient-to-r from-green-400 to-primary-500 rounded-full transition-all duration-1000"
                   style={{ width: `${result.confidence * 100}%` }}
                 ></div>
               </div>
@@ -161,7 +161,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700 dark:text-gray-300">Processing Info</h3>
-            <Clock className="w-5 h-5 text-purple-500" />
+            <Clock className="w-5 h-5 text-primary-500" />
           </div>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
@@ -175,7 +175,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Analysis Date</span>
               <span className="font-medium">
-                {result.timestamp.toLocaleDateString()}
+                {/* timestamp arrives as an ISO string from the model service and from saved history */}
+                {result.timestamp ? new Date(result.timestamp).toLocaleDateString() : '—'}
               </span>
             </div>
           </div>
@@ -184,7 +185,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
 
       {/* Findings Section */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-primary-50 dark:from-primary-900/20 dark:to-primary-900/20">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Key Findings
           </h3>
@@ -283,7 +284,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
                     <div className="mt-3">
                       <a
                         href={recommendation.actionUrl}
-                        className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        className="inline-flex items-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
                       >
                         Take action →
                       </a>
