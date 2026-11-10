@@ -4,6 +4,18 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api').replace(/\/api\/?$/, '');
 
+// Send the logged-in user's token with API calls (booking and patient data need it)
+const http = axios.create();
+http.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('auth_token');
+    if (token) config.headers.set('Authorization', `Bearer ${token}`);
+  } catch {
+    /* storage blocked: request goes out without a token */
+  }
+  return config;
+});
+
 class RealtimeService {
   private socket: Socket | null = null;
   private listeners: Map<string, Function[]> = new Map();
@@ -71,27 +83,27 @@ class RealtimeService {
 
   // API Calls
   async getBeds(filters?: any) {
-    const response = await axios.get(`${API_URL}/beds`, { params: filters });
+    const response = await http.get(`${API_URL}/beds`, { params: filters });
     return response.data;
   }
 
   async getDoctors(filters?: any) {
-    const response = await axios.get(`${API_URL}/doctors`, { params: filters });
+    const response = await http.get(`${API_URL}/doctors`, { params: filters });
     return response.data;
   }
 
   async getPatients(filters?: any) {
-    const response = await axios.get(`${API_URL}/patients-api`, { params: filters });
+    const response = await http.get(`${API_URL}/patients-api`, { params: filters });
     return response.data;
   }
 
   async getHospitalWaitTimes(hospitalId: number) {
-    const response = await axios.get(`${API_URL}/analytics/wait-times/${hospitalId}`);
+    const response = await http.get(`${API_URL}/analytics/wait-times/${hospitalId}`);
     return response.data;
   }
 
   async searchHospitals(symptoms: string[], location?: { lat: number; lng: number }) {
-    const response = await axios.post(`${API_URL}/hospitals/search`, {
+    const response = await http.post(`${API_URL}/hospitals/search`, {
       symptoms,
       location
     });
@@ -99,29 +111,34 @@ class RealtimeService {
   }
 
   async bookAppointment(data: any) {
-    const response = await axios.post(`${API_URL}/appointments`, data);
+    const response = await http.post(`${API_URL}/appointments`, data);
+    return response.data;
+  }
+
+  async getPatientAppointments(patientId: string | number) {
+    const response = await http.get(`${API_URL}/appointments/patient/${patientId}`);
     return response.data;
   }
 
   async getPatientForUser(userId: string | number) {
-    const response = await axios.get(`${API_URL}/appointments/patient-for-user/${userId}`);
+    const response = await http.get(`${API_URL}/appointments/patient-for-user/${userId}`);
     return response.data;
   }
 
   async getDefaultHospital() {
-    const response = await axios.get(`${API_URL}/appointments/default-hospital`);
+    const response = await http.get(`${API_URL}/appointments/default-hospital`);
     return response.data;
   }
 
   async getAvailability(doctorId: number, days = 90) {
-    const response = await axios.get(`${API_URL}/appointments/availability`, {
+    const response = await http.get(`${API_URL}/appointments/availability`, {
       params: { doctorId, days }
     });
     return response.data;
   }
 
   async getAvailableSlots(doctorId: number, date: string) {
-    const response = await axios.get(`${API_URL}/appointments/slots`, {
+    const response = await http.get(`${API_URL}/appointments/slots`, {
       params: { doctorId, date }
     });
     return response.data;
