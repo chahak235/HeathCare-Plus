@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /doctor-dashboard
+Disallow: /patient-portal
+
+Sitemap: https://heathcareplus.vercel.app/sitemap.xml
