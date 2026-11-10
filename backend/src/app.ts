@@ -20,6 +20,7 @@ import { seedInitialData } from './config/seed';
 import aiRoutes from './routes/ai.routes';
 import appointmentRoutes from './routes/appointment.routes';
 import emergencyRoutes from './routes/emergency.routes';
+import skinRoutes from './routes/skin.routes';
 import { AlertService } from './services/alert.service'; // ✅ ADD THIS
 
 import { assertProductionSecrets } from './config/secrets';
@@ -262,6 +263,7 @@ app.use(`${apiPrefix}/appointments`, appointmentRoutes);
 console.log('46. Appointment routes mounted');
 
 app.use(`${apiPrefix}/emergency`, emergencyRoutes);
+app.use(`${apiPrefix}/skin`, skinRoutes);
 console.log('46.5 Emergency routes mounted');
 
 // 404 handler
