@@ -1,8 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api').replace(/\/api\/?$/, '');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
 
 // Send the logged-in user's token with API calls (booking and patient data need it)
 const http = axios.create();

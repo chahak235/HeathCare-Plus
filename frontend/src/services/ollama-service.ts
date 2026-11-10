@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const OLLAMA_BASE_URL = 'http://localhost:11434/api';
-const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const BACKEND_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 // The backend's hosted AI handles production traffic. Calling Ollama directly
 // from the browser is only meaningful on a developer's own machine.
 const DIRECT_OLLAMA_ENABLED = import.meta.env.DEV;

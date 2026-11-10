@@ -9,7 +9,7 @@ import type { AnalysisResult, Finding, Recommendation, ModelInfo } from '../type
 // There is no mock fallback here anymore: if the backend can't produce a
 // real result, this throws, and the UI shows that honestly instead of
 // presenting invented findings as if they were real.
-const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const NOTABILITY_TO_SEVERITY: Record<string, 'low' | 'medium' | 'high'> = {
   routine: 'low',
