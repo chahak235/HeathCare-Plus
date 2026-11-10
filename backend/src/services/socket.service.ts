@@ -1,7 +1,8 @@
 import { Server as SocketServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import { 
-  SocketEvent, 
+import { allowedOrigins } from '../config/cors';
+import {
+  SocketEvent,
   BedUpdateData, 
   PatientTransitionData,
   AmbulanceLocationData,
@@ -18,7 +19,7 @@ export class SocketService {
   constructor(server: HttpServer) {
     this.io = new SocketServer(server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://localhost:5173'],
+        origin: allowedOrigins(),
         credentials: true,
         methods: ['GET', 'POST']
       },
