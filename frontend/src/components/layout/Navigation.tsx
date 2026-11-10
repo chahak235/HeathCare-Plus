@@ -63,14 +63,14 @@ export const Navigation: React.FC = () => {
         '/dashboard';
     const dashboardLabel =
         user?.role === 'doctor' ? 'My Appointments' :
-        user?.role === 'hospital' ? 'Command Center' :
+        user?.role === 'hospital' || user?.role === 'admin' ? 'Command Center' :
         'Appointments';
 
     // Command Center is hospital-only — hide it from patients/doctors/
     // logged-out visitors instead of showing a link that just bounces them
     // straight back out via the role redirect.
     const visibleNavigation = navigationItems.filter(
-        (item) => item.nameKey !== 'commandCenter' || user?.role === 'hospital'
+        (item) => item.nameKey !== 'commandCenter' || user?.role === 'hospital' || user?.role === 'admin'
     );
 
     // Apply + persist whenever darkMode changes, including the very first
