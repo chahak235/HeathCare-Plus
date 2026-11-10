@@ -48,7 +48,11 @@ export const AppDataSource = new DataSource({
         database: process.env.DB_NAME || 'healthcare_db',
       }),
 
-  synchronize: true,
+  // Auto-creating/altering tables is handy locally but risky on live data:
+  // off in production unless DB_SYNCHRONIZE=true is set for a one-off update.
+  synchronize: process.env.DB_SYNCHRONIZE
+    ? process.env.DB_SYNCHRONIZE === 'true'
+    : process.env.NODE_ENV !== 'production',
   logging: false,
   entities: entities,
   migrations: [],
