@@ -6,6 +6,7 @@ import { Hospital } from '../entities/Hospital.entity';
 import { CreateUserDto, LoginDto, AuthResponse, JwtPayload, User as UserType } from '../types/auth.types';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/secrets';
 
 export class AuthService {
   private userRepository = AppDataSource.getRepository(User);
@@ -250,13 +251,13 @@ export class AuthService {
       role: user.role
     };
 
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-this';
+    const secret = getJwtSecret();
     return jwt.sign(payload, secret, { expiresIn: '7d' });
   }
 
   verifyToken(token: string): JwtPayload | null {
     try {
-      const secret = process.env.JWT_SECRET || 'your-secret-key-change-this';
+      const secret = getJwtSecret();
       return jwt.verify(token, secret) as JwtPayload;
     } catch (error) {
       return null;

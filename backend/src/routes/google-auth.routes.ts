@@ -5,6 +5,7 @@ import { AppDataSource } from '../config/database.config';
 import { Doctor } from '../entities/Doctor.entity';
 import { authenticate } from '../middleware/auth.middleware';
 import { ownDoctorParam } from '../middleware/appointment-access';
+import { getJwtSecret } from '../config/secrets';
 
 const router = Router();
 const calendarService = new GoogleCalendarService();
@@ -16,7 +17,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // which doctor to save the refresh token against. It is signed and expires, so
 // nobody can attach their own Google account to another doctor's profile.
 const STATE_TTL_MS = 10 * 60 * 1000;
-const stateKey = () => process.env.JWT_SECRET || 'your-secret-key-change-this';
+const stateKey = () => getJwtSecret();
 
 function signState(doctorId: number): string {
   const body = `${doctorId}.${Date.now() + STATE_TTL_MS}`;
