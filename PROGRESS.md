@@ -41,6 +41,7 @@ cd frontend && npm run dev          # http://localhost:3000
 | 9 | Groq AI key and business email | Done. `GROQ_API_KEY` set; tested AI chat reply and a full voice report (spoken clip → Whisper transcript → AI report with scores). Business Gmail `healthcareplus.care@gmail.com` set as `SMTP_USER` and `EMAIL_FROM`; Gmail App Password added; real email tested (sent to the business inbox via smtp.gmail.com:587) |
 | 10 | Google Meet + Calendar live | Done. Google Cloud project "HealthCare Plus" (`versatile-art-514316-e7`) under healthcareplus.care@gmail.com: Calendar API on, consent screen in Testing mode (test user: healthcareplus.care@gmail.com), Desktop OAuth client. `npm run google-auth` now saves `GOOGLE_PLATFORM_REFRESH_TOKEN` into `backend/.env` itself (never printed; `--print` for Render). Tested a real online booking: confirmed, Meet link created, calendar invite and emails to patient and doctor. Test data: Dr. Rajesh Kumar (id 1) email = healthcareplus.care+doctor@gmail.com; test patient healthcareplus.care+patient@gmail.com (password in `backend/.env` as TEST_PATIENT_PASSWORD) |
 | 11 | Fixes from your testing + cleanup + security | Done. Chat bubble shows short formatted answers in site colors; Features opens the real X-ray analyzer; X-ray results crash fixed; SOS siren + vibration; removed fake success stories, random clinic numbers, fake success rates and fake profile activity; profile shows real bookings and BMI; navbar no longer overflows on laptops. Security: bookings, patient data, doctor schedules/settings now need login and ownership (`backend/src/middleware/appointment-access.ts`, 16 checks pass); Google Calendar connect uses a signed 10-minute link |
+| 12 | Security + cleanup round 2 | Done. Patient records, bed changes, bed allocation, hospital edits and staff notifications need the right login (`backend/src/middleware/staff-guards.ts`, mounted in `app.ts`); 29 access checks pass. Production: server refuses to start without a strong `JWT_SECRET` (`backend/src/config/secrets.ts`); table auto-sync is off when `NODE_ENV=production` (set `DB_SYNCHRONIZE=true` once to apply schema changes). Removed 21 unused packages (Ollama, Redis, Bull, MySQL, Firebase, AWS SDK and others; 223 installed packages fewer) |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
 ## Docs
@@ -56,7 +57,7 @@ cd frontend && npm run dev          # http://localhost:3000
 5. **Product website polish**: business branding, landing page copy, pricing or contact page (needs your business details). Demo content already removed.
 6. **Doctor mode**: doctor sign-up already lets doctors set days and hours in the dashboard settings. Could add per-day hours and holidays.
 7. **Hospital/admin mode**: review the hospital dashboard (beds, doctors) for real data.
-8. **Security before launch**: appointment/doctor routes and Google connect are protected. Still to do: legacy `/api/patients` and `/api/patients-api` (old demo data) need login; turn off `synchronize: true` in production; require `JWT_SECRET` in production.
+8. **Security before launch**: done for all routes that change or expose data. On Render set `NODE_ENV=production` and a long random `JWT_SECRET`; set `DB_SYNCHRONIZE=true` only for the deploy that adds new columns, then remove it.
 9. **Skin model**: when your friend sends it, convert to ONNX and enable it (see task 1 note).
 10. **Deploy**: add the new environment variables on Render, then push to your GitHub repo when you're ready.
 
@@ -69,5 +70,5 @@ To add the skin model later: convert it to ONNX the same way, put it in `fronten
 
 ## Known issues found in the original code
 
-- Legacy `/api/patients*` demo routes still have no login (appointments, doctors, emergency are fixed)
-- Database uses `synchronize: true` in production
+- None open from the original list (all fixed). Remaining old demo areas: the 3D dashboard and the in-memory demo patients in `PatientAPIService`.
+
