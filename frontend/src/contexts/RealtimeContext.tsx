@@ -1,3 +1,4 @@
+import { authHeaders } from '../services/auth-header';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import realtimeService from '../services/realtime.service';
@@ -32,7 +33,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (user?.role !== 'hospital' || !user.id) return;
     const API_URL = import.meta.env.VITE_API_URL || 'https://healthcare-backend-tylz.onrender.com/api';
-    fetch(`${API_URL}/hospitals/hospital-for-user/${user.id}`)
+    fetch(`${API_URL}/hospitals/hospital-for-user/${user.id}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => setHospitalId(d?.data?.hospitalId ?? null))
       .catch(() => setHospitalId(null));
@@ -42,7 +43,10 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const [bedsRes, patientsRes, doctorsRes] = await Promise.all([
         realtimeService.getBeds(hospitalId ? { hospitalId } : undefined),
-        realtimeService.getPatients(),
+        // Patient records are staff-only on the server; other users skip the call
+        ['doctor', 'hospital', 'admin'].includes(user?.role || '')
+          ? realtimeService.getPatients().catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] }),
         realtimeService.getDoctors(hospitalId ? { hospitalId, available: true } : { available: true })
       ]);
 
