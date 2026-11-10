@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import HealthProfileForm from '../components/emergency/HealthProfileForm';
 import { emergencyService, HealthProfile } from '../services/emergency-service';
 import realtimeService from '../services/realtime.service';
+import { reviewsService } from '../services/reviews-service';
+import RateVisit from '../components/features/reviews/RateVisit';
 import { Container } from '../components/layout/Container';
 import { GlassCard } from '../components/layout/GlassCard';
 import { Button } from '../components/ui/Button';
@@ -44,6 +46,7 @@ export const Profile: React.FC = () => {
     // Real data for the patient: health profile (for BMI) and their bookings
     const [health, setHealth] = useState<HealthProfile | null>(null);
     const [appointments, setAppointments] = useState<any[] | null>(null);
+    const [reviewed, setReviewed] = useState<number[]>([]);
 
     useEffect(() => {
         if (!user || user.role !== 'patient' || !token) return;
@@ -53,6 +56,7 @@ export const Profile: React.FC = () => {
             .then((r) => (r?.data?.patientId ? realtimeService.getPatientAppointments(r.data.patientId) : { data: [] }))
             .then((r) => setAppointments(Array.isArray(r?.data) ? r.data : []))
             .catch(() => setAppointments([]));
+        reviewsService.mine().then(setReviewed).catch(() => setReviewed([]));
     }, [user?.id, user?.role, token]);
 
     const bmi = health?.heightCm && health?.weightKg
@@ -244,6 +248,9 @@ export const Profile: React.FC = () => {
                                                     <a href={a.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
                                                         Join Google Meet
                                                     </a>
+                                                )}
+                                                {!upcoming && a.status !== 'cancelled' && !reviewed.includes(a.id) && (
+                                                    <RateVisit appointmentId={a.id} doctorName={a.doctorName} onDone={() => setReviewed((r) => [...r, a.id])} />
                                                 )}
                                             </div>
                                             <Badge className={a.status === 'cancelled'

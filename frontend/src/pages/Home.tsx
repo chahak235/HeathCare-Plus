@@ -1,5 +1,6 @@
 
 import { authHeaders } from '../services/auth-header';
+import PatientReviews from '../components/features/reviews/PatientReviews';
 import { useNavigate } from 'react-router-dom';
 import { medicalInsights, type MedicalInsight } from '../mocks/medicalInsights';
 import { Container } from '../components/layout/Container';
@@ -933,6 +934,9 @@ export const Home: React.FC = () => {
           </div>
         </Container>
       </section>
+
+      {/* Real patient reviews (hidden until there are any) */}
+      <PatientReviews />
 
       {/* Weather & Notifications */}
       <section className="py-20 bg-gradient-to-r from-blue-50/80 to-cyan-50/80 dark:from-blue-900/20 dark:to-cyan-900/20">
