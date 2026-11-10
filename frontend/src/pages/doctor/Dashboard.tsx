@@ -115,9 +115,15 @@ export const DoctorDashboard: React.FC = () => {
     window.history.replaceState({}, '', window.location.pathname);
   }, [refetchDoctorProfile]);
 
-  const connectGoogleCalendar = () => {
+  const connectGoogleCalendar = async () => {
     if (!doctorId) return;
-    window.location.href = `${API_URL}/auth/google/connect/${doctorId}`;
+    try {
+      // Ask (as the logged-in doctor) for a signed, short-lived Google consent link
+      const res = await axios.get(`${API_URL}/auth/google/connect-url/${doctorId}`);
+      if (res.data?.url) window.location.href = res.data.url;
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Could not start Google Calendar connection. Please log in again.');
+    }
   };
 
   const toggleAvailability = async () => {
