@@ -37,7 +37,20 @@ import { isEncrypted } from '../utils/field-crypto';
   for (const id of ids) {
     const p = await repo.findOne({ where: { id } });
     if (!p) continue;
-    await repo.save(p);
+    // update() always writes the given columns through their encryption
+    // transformers; save() skips JSON columns it considers unchanged
+    await repo.update(
+      { id },
+      {
+        medicalNotes: p.medicalNotes,
+        emergencyContacts: p.emergencyContacts,
+        preferredHospital: p.preferredHospital,
+        emergencyContact: p.emergencyContact,
+        allergies: p.allergies,
+        chronicConditions: p.chronicConditions,
+        currentMedications: p.currentMedications,
+      } as any
+    );
     done += 1;
   }
   console.log(`Encrypted ${done} of ${raw.length} patient records (${raw.length - ids.length} were already encrypted or empty).`);
