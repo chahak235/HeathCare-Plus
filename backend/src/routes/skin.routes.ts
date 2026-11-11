@@ -22,8 +22,10 @@ router.get('/status', async (_req: Request, res: Response) => {
   if (!base) return res.json({ success: true, available: false, reason: 'not_configured' });
   try {
     const r = await fetch(`${base}/health`, { signal: AbortSignal.timeout(8000) });
-    const info = await r.json().catch(() => ({}));
-    return res.json({ success: true, available: r.ok, info });
+    const info: any = await r.json().catch(() => ({}));
+    // "loading" counts as available: the first request waits for the model
+    const available = r.ok && (info?.status === 'ok' || info?.status === 'loading');
+    return res.json({ success: true, available, info, reason: info?.status === 'loading' ? 'starting' : undefined });
   } catch {
     // A sleeping free Space wakes on the first real request
     return res.json({ success: true, available: false, reason: 'starting' });
