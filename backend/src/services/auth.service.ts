@@ -137,9 +137,7 @@ export class AuthService {
           phone: user.phone,
           // explicit role type narrowing:
           role: (user.role as 'patient' | 'doctor' | 'admin' | 'hospital'),
-          isVerified: user.isVerified,
-          verificationToken: user.verificationToken ?? undefined,
-          resetToken: user.resetToken ?? undefined,
+          isVerified: user.isVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
         },
@@ -190,9 +188,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: (user.role as 'patient' | 'doctor' | 'admin' | 'hospital'),
-        isVerified: user.isVerified,
-        verificationToken: user.verificationToken ?? undefined,
-        resetToken: user.resetToken ?? undefined,
+        isVerified: user.isVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
@@ -232,9 +228,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: (user.role as 'patient' | 'doctor' | 'admin' | 'hospital'),
-        isVerified: user.isVerified,
-        verificationToken: user.verificationToken ?? undefined,
-        resetToken: user.resetToken ?? undefined,
+        isVerified: user.isVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
