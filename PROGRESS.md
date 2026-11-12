@@ -62,6 +62,8 @@ cd frontend && npm run dev          # http://localhost:3000
 - **Google app published (12 Nov 2026).** Branding filled in (home, privacy, terms, domain `heathcareplus.vercel.app`), status "In production" (unverified: people connecting see a "Google hasn't verified this app" warning and click Advanced → Continue; fine for up to 100 accounts). New key made with `npm run google-auth` and put on Render; live test: online booking confirmed in 2.9 s with Meet link. Keys no longer expire after 7 days.
 
 - **Skin model: on hold.** Ready for Google Cloud Run (see `skin-model-service/README.md`); then set `SKIN_MODEL_URL` and `SKIN_SERVICE_KEY` on Render.
+- **Sample beds (12 Nov: kept for now):** the 200 beds in Bed Management are seed data attached to real hospital names, so occupancy and "free emergency beds" figures are not real. Staff-only. Clear them when real hospitals add their own beds.
+- **Connect Google Calendar removed (12 Nov):** bookings already arrive in the doctor's calendar as invites from the business account.
 - **Sample doctors (12 Nov: you chose to keep them for now; revisit before real patients):** the 15 seeded doctors are invented but listed at real hospitals (AIIMS, NIMHANS, CMC Vellore, Apollo…) with made-up phone numbers, and can be booked. Hide or replace them with real doctors.
 - **Make your admin account:** sign up on the site, then `npm run make-admin -- your@email` in `backend`. Test admin: `TEST_ADMIN_EMAIL` / `TEST_ADMIN_PASSWORD` in `backend/.env`.
 - **Not done on purpose:** "HIPAA compliant", "end-to-end encryption", invented awards and generated testimonials stay off the site; they would be false claims. Real safeguards and real reviews were built instead.
