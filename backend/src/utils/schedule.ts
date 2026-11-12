@@ -71,11 +71,42 @@ export function parseWorkingHours(text?: string | null): { start: number; end: n
   return { start, end };
 }
 
+/**
+ * One or more time ranges, e.g. "9:00-13:00, 14:00-18:00" (a lunch break).
+ * Invalid parts are skipped; overlapping ranges are kept apart as given.
+ */
+export function parseTimeRanges(text?: string | null): { start: number; end: number }[] {
+  if (!text) return [];
+  return text
+    .split(/[,;]/)
+    .map((part) => {
+      const pieces = part.split('-');
+      if (pieces.length !== 2) return null;
+      const start = parseClock(pieces[0]);
+      const end = parseClock(pieces[1]);
+      return start !== null && end !== null && end > start ? { start, end } : null;
+    })
+    .filter((r): r is { start: number; end: number } => r !== null)
+    .sort((x, y) => x.start - y.start);
+}
+
 export interface DoctorSchedule {
   availableDays?: string[] | null;
   availableHours?: string | null;
+  /** Hours for particular weekdays, e.g. { Saturday: "9:00-13:00" }; overrides availableHours */
+  weeklyHours?: Record<string, string> | null;
+  /** Clinic dates ("YYYY-MM-DD") the doctor is off: holidays, leave */
+  daysOff?: string[] | null;
   consultationDuration?: number | null;
   isAcceptingPatients?: boolean | null;
+}
+
+/** Working time ranges for one weekday, using the day's own hours if set. */
+export function hoursForDay(doctor: DoctorSchedule, weekday: string): { start: number; end: number }[] {
+  const own = parseTimeRanges(doctor.weeklyHours?.[weekday]);
+  if (own.length) return own;
+  const general = parseTimeRanges(doctor.availableHours);
+  return general.length ? general : [parseWorkingHours(doctor.availableHours)];
 }
 
 export interface BookedRange {
@@ -105,22 +136,28 @@ export function buildDaySlots(
   if (doctor.isAcceptingPatients === false) return [];
   if (!isBookableDate(dateKey, now)) return [];
   const days = doctor.availableDays && doctor.availableDays.length > 0 ? doctor.availableDays : DEFAULT_DAYS;
-  if (!days.includes(weekdayOf(dateKey))) return [];
+  const weekday = weekdayOf(dateKey);
+  if (!days.includes(weekday)) return [];
+  if (doctor.daysOff?.includes(dateKey)) return [];
 
-  const { start, end } = parseWorkingHours(doctor.availableHours);
   const duration = doctor.consultationDuration && doctor.consultationDuration > 0 ? doctor.consultationDuration : 30;
   const earliest = now.getTime() + MIN_LEAD_MINUTES * 60_000;
 
   const slots: Slot[] = [];
-  for (let minute = start; minute + duration <= end; minute += duration) {
-    const startTime = clinicTime(dateKey, minute);
-    const endTime = clinicTime(dateKey, minute + duration);
-    const overlaps = booked.some((b) => {
-      const bStart = b.start.getTime();
-      const bEnd = bStart + b.durationMinutes * 60_000;
-      return startTime.getTime() < bEnd && endTime.getTime() > bStart;
-    });
-    slots.push({ startTime, endTime, available: !overlaps && startTime.getTime() >= earliest });
+  const seen = new Set<number>();
+  for (const { start, end } of hoursForDay(doctor, weekday)) {
+    for (let minute = start; minute + duration <= end; minute += duration) {
+      if (seen.has(minute)) continue; // ranges that overlap
+      seen.add(minute);
+      const startTime = clinicTime(dateKey, minute);
+      const endTime = clinicTime(dateKey, minute + duration);
+      const overlaps = booked.some((b) => {
+        const bStart = b.start.getTime();
+        const bEnd = bStart + b.durationMinutes * 60_000;
+        return startTime.getTime() < bEnd && endTime.getTime() > bStart;
+      });
+      slots.push({ startTime, endTime, available: !overlaps && startTime.getTime() >= earliest });
+    }
   }
   return slots;
 }
