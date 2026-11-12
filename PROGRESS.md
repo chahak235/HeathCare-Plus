@@ -61,7 +61,7 @@ cd frontend && npm run dev          # http://localhost:3000
 - **Publish the Google app before 18 November 2026.** The Google token was created on 11 Nov in Testing mode and stops working after 7 days (Meet links and emails fail). Google Cloud → Google Auth Platform → Audience → Publish app, then run `npm run google-auth -- --print` in `backend` and paste the new `GOOGLE_PLATFORM_REFRESH_TOKEN` into Render.
 
 - **Skin model: on hold.** Ready for Google Cloud Run (see `skin-model-service/README.md`); then set `SKIN_MODEL_URL` and `SKIN_SERVICE_KEY` on Render.
-- **Sample doctors (decide before real patients):** the 15 seeded doctors are invented but listed at real hospitals (AIIMS, NIMHANS, CMC Vellore, Apollo…) with made-up phone numbers, and can be booked. Hide or replace them with real doctors.
+- **Sample doctors (12 Nov: you chose to keep them for now; revisit before real patients):** the 15 seeded doctors are invented but listed at real hospitals (AIIMS, NIMHANS, CMC Vellore, Apollo…) with made-up phone numbers, and can be booked. Hide or replace them with real doctors.
 - **Run once:** `npm run recount-doctor-stats` in `backend` to replace the invented ratings/review counts (e.g. "4.6, 180 reviews") with real ones.
 - **Make your admin account:** sign up on the site, then `npm run make-admin -- your@email` in `backend`. Test admin: `TEST_ADMIN_EMAIL` / `TEST_ADMIN_PASSWORD` in `backend/.env`.
 - **Not done on purpose:** "HIPAA compliant", "end-to-end encryption", invented awards and generated testimonials stay off the site; they would be false claims. Real safeguards and real reviews were built instead.
@@ -81,7 +81,7 @@ cd frontend && npm run dev          # http://localhost:3000
 
 ## Things you need to provide later
 
-- Decision on the 15 sample doctors (hide, or replace with real doctors who sign up)
+- When real doctors join: hide or replace the 15 sample doctors
 - Google Cloud billing + bucket for the skin model (when you want it live)
 
 ## Known issues found in the original code
