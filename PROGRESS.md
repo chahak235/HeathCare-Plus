@@ -51,7 +51,6 @@ cd frontend && npm run dev          # http://localhost:3000
 | 19 | Faster hospital map | Done. `/api/hospital-search` caches OpenStreetMap results in the database for everyone (7 days per city, 1 day "near me"). Pune: 45 s first time, 1.5 s after. If the API fails, the browser searches directly as before |
 | 20 | Honest doctor numbers + cleanup | Doctors without reviews show "New" (was an assumed 4.5). `npm run recount-doctor-stats` sets ratings/patient counts from real reviews and completed visits (run on 12 Nov: all 15 now show "New"; Dr. Rajesh Kumar 1 patient seen). Removed 79 unused frontend files and 6 packages (frontend type errors 43 → 0), and the old JavaScript server copy in `backend/` (incl. scripts that created demo logins). `npm run start:ts` now starts the real server |
 | 21 | Forgot password | Done. "Forgot password?" on the login page (it used to open a missing page) emails a one-time link (only its hash is stored, 30 minutes, max 3 requests per email per hour); same answer whether or not the account exists; new password follows the sign-up rule; a "password changed" email follows. Pages `/forgot-password` and `/reset-password`. 14 checks pass locally; live request creates the link. Limit: other devices stay logged in until their 7-day session ends. Uses the same Google email token as bookings, so it also needs the Google app published |
-| 22 | SOS text to family | Done (free). After SOS: **Text all family** opens the phone's messages with every family number and the message (name, needs help, map link, blood group) ready; **Send on WhatsApp** opens WhatsApp's share screen with the same text. Patient presses Send. SOS now always alerts nearby hospitals, even when no family email is saved. Later option: automatic SMS via Fast2SMS/MSG91/Twilio (needs DLT registration) |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
 ## Docs
@@ -85,6 +84,7 @@ cd frontend && npm run dev          # http://localhost:3000
 ## Things you need to provide later
 
 - When real doctors join: hide or replace the 15 sample doctors
+- SOS text to family (later): a one-tap "Text all family" + WhatsApp version was built and then removed on request (13 Nov); automatic SMS needs Fast2SMS/MSG91/Twilio + DLT registration
 - Google Cloud billing + bucket for the skin model (when you want it live)
 
 ## Known issues found in the original code
