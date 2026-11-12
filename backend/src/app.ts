@@ -270,6 +270,7 @@ console.log('46. Appointment routes mounted');
 app.use(`${apiPrefix}/emergency`, accessLog('health_profile') as any, emergencyRoutes);
 app.use(`${apiPrefix}/skin`, skinRoutes);
 app.use(`${apiPrefix}/reviews`, reviewRoutes);
+app.use(`${apiPrefix}/admin/sos-alerts`, accessLog('sos_alerts') as any);
 app.use(`${apiPrefix}/admin`, hospitalStaff as any, adminRoutes);
 console.log('46.5 Emergency routes mounted');
 
