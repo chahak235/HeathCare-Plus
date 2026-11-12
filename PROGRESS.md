@@ -59,7 +59,7 @@ cd frontend && npm run dev          # http://localhost:3000
 
 ## Reminder
 
-- **Publish the Google app before 18 November 2026.** The Google token was created on 11 Nov in Testing mode and stops working after 7 days (Meet links and emails fail). Google Cloud → Google Auth Platform → Audience → Publish app, then run `npm run google-auth -- --print` in `backend` and paste the new `GOOGLE_PLATFORM_REFRESH_TOKEN` into Render.
+- **Google app published (12 Nov 2026).** Branding filled in (home, privacy, terms, domain `heathcareplus.vercel.app`), status "In production" (unverified: people connecting see a "Google hasn't verified this app" warning and click Advanced → Continue; fine for up to 100 accounts). New key made with `npm run google-auth` and put on Render; live test: online booking confirmed in 2.9 s with Meet link. Keys no longer expire after 7 days.
 
 - **Skin model: on hold.** Ready for Google Cloud Run (see `skin-model-service/README.md`); then set `SKIN_MODEL_URL` and `SKIN_SERVICE_KEY` on Render.
 - **Sample doctors (12 Nov: you chose to keep them for now; revisit before real patients):** the 15 seeded doctors are invented but listed at real hospitals (AIIMS, NIMHANS, CMC Vellore, Apollo…) with made-up phone numbers, and can be booked. Hide or replace them with real doctors.
@@ -71,7 +71,7 @@ cd frontend && npm run dev          # http://localhost:3000
 1. **Email**: done (real Gmail SMTP works).
 2. **Test end to end**: sign up as a patient, fill the health profile, book an online and an offline appointment, try SOS, try the voice analyzer, and try a real chest X-ray.
 3. **Email**: add `SMTP_USER` / `SMTP_PASS` (Gmail App Password) so confirmations reach real inboxes.
-4. **Google Meet and Calendar**: done. Before real launch: publish the consent screen (Audience → Publish app) or Google will expire the refresh token every 7 days while in Testing mode.
+4. **Google Meet and Calendar**: done, app published (no 7-day expiry).
 5. **Product website polish**: business branding, landing page copy, pricing or contact page (needs your business details). Demo content already removed.
 6. **Doctor mode**: done (per-day hours, breaks, days off).
 7. **Hospital/admin mode**: done (real SOS alerts, bookings, analytics, reviews, access log, account approvals). Beds come from the hospital's own bed records.
