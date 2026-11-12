@@ -61,11 +61,22 @@ export const DoctorDashboard: React.FC = () => {
   // Settings modal states
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [doctorSettings, setDoctorSettings] = useState({
+  const [doctorSettings, setDoctorSettings] = useState<{
+    availableDays: string[];
+    availableHours: string;
+    consultationDuration: number;
+    weeklyHours: Record<string, string>;
+    daysOff: string[];
+  }>({
     availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     availableHours: '09:00-17:00',
-    consultationDuration: 30
+    consultationDuration: 30,
+    weeklyHours: {},
+    daysOff: [],
   });
+  const [newDayOff, setNewDayOff] = useState('');
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const upcomingDaysOff = doctorSettings.daysOff.filter((d) => d >= todayKey);
 
   const refetchDoctorProfile = useCallback(() => {
     if (!doctorId) return;
@@ -81,7 +92,9 @@ export const DoctorDashboard: React.FC = () => {
           setDoctorSettings({
             availableDays: d.availableDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
             availableHours: d.availableHours || '09:00-17:00',
-            consultationDuration: d.consultationDuration || 30
+            consultationDuration: d.consultationDuration || 30,
+            weeklyHours: d.weeklyHours || {},
+            daysOff: d.daysOff || [],
           });
         }
       })
@@ -145,12 +158,16 @@ export const DoctorDashboard: React.FC = () => {
     if (!doctorId) return;
     setSavingSettings(true);
     try {
-      await axios.patch(`${API_URL}/doctors/${doctorId}/availability`, doctorSettings);
+      // Only send hours for days the doctor actually works
+      const weeklyHours = Object.fromEntries(
+        Object.entries(doctorSettings.weeklyHours).filter(([day, h]) => doctorSettings.availableDays.includes(day) && h.trim())
+      );
+      await axios.patch(`${API_URL}/doctors/${doctorId}/availability`, { ...doctorSettings, weeklyHours });
       setShowSettingsModal(false);
       alert('Settings updated successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save settings:', error);
-      alert("Couldn't save settings — please try again.");
+      alert(error?.response?.data?.error || "Couldn't save settings — please try again.");
     } finally {
       setSavingSettings(false);
     }
@@ -518,51 +535,113 @@ export const DoctorDashboard: React.FC = () => {
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-neutral-900 rounded-xl max-w-md w-full p-6 shadow-xl">
+          <div className="bg-white dark:bg-neutral-900 rounded-xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">Doctor Settings</h3>
-              <button onClick={() => setShowSettingsModal(false)} className="text-neutral-500 hover:text-neutral-700">
+              <button onClick={() => setShowSettingsModal(false)} className="text-neutral-500 hover:text-neutral-700" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
-            <div className="space-y-4">
+
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-1">Available Days</label>
-                <div className="flex flex-wrap gap-2">
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                    <label key={day} className="flex items-center gap-1 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={doctorSettings.availableDays.includes(day)}
-                        onChange={(e) => {
-                          const newDays = e.target.checked 
-                            ? [...doctorSettings.availableDays, day]
-                            : doctorSettings.availableDays.filter(d => d !== day);
-                          setDoctorSettings({...doctorSettings, availableDays: newDays});
-                        }}
-                      />
-                      <span className="text-sm">{day.slice(0, 3)}</span>
-                    </label>
-                  ))}
-                </div>
+                <label className="block text-sm font-medium mb-1">Usual hours</label>
+                <input
+                  type="text"
+                  value={doctorSettings.availableHours}
+                  onChange={(e) => setDoctorSettings({ ...doctorSettings, availableHours: e.target.value })}
+                  placeholder="09:00-17:00"
+                  className="w-full p-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
+                />
+                <p className="text-xs text-neutral-500 mt-1">Add a break with a comma, e.g. 09:00-13:00, 14:00-18:00</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Available Hours (e.g. 09:00-17:00)</label>
-                <input 
-                  type="text" 
-                  value={doctorSettings.availableHours}
-                  onChange={(e) => setDoctorSettings({...doctorSettings, availableHours: e.target.value})}
-                  className="w-full p-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
-                />
+                <label className="block text-sm font-medium mb-2">Working days and their hours</label>
+                <div className="space-y-2">
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
+                    const works = doctorSettings.availableDays.includes(day);
+                    return (
+                      <div key={day} className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 w-28 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={works}
+                            onChange={(e) => {
+                              const newDays = e.target.checked
+                                ? [...doctorSettings.availableDays, day]
+                                : doctorSettings.availableDays.filter((d) => d !== day);
+                              setDoctorSettings({ ...doctorSettings, availableDays: newDays });
+                            }}
+                          />
+                          <span className="text-sm">{day}</span>
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!works}
+                          value={doctorSettings.weeklyHours[day] || ''}
+                          onChange={(e) => setDoctorSettings({ ...doctorSettings, weeklyHours: { ...doctorSettings.weeklyHours, [day]: e.target.value } })}
+                          placeholder={works ? `Usual (${doctorSettings.availableHours || '09:00-17:00'})` : 'Off'}
+                          aria-label={`Hours on ${day}`}
+                          className="flex-1 min-w-0 p-1.5 text-sm border rounded-md dark:bg-neutral-800 dark:border-neutral-700 disabled:opacity-50"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">Leave a day blank to use your usual hours.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Days off (holidays, leave)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={newDayOff}
+                    min={todayKey}
+                    onChange={(e) => setNewDayOff(e.target.value)}
+                    className="flex-1 min-w-0 p-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
+                    aria-label="Day off"
+                  />
+                  <Button
+                    variant="secondary"
+                    disabled={!newDayOff}
+                    onClick={() => {
+                      if (!newDayOff || doctorSettings.daysOff.includes(newDayOff)) return;
+                      setDoctorSettings({ ...doctorSettings, daysOff: [...doctorSettings.daysOff, newDayOff].sort() });
+                      setNewDayOff('');
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {upcomingDaysOff.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {upcomingDaysOff.map((d) => (
+                      <span key={d} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200 text-xs">
+                        {new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                        <button
+                          type="button"
+                          onClick={() => setDoctorSettings({ ...doctorSettings, daysOff: doctorSettings.daysOff.filter((x) => x !== d) })}
+                          aria-label={`Remove ${d}`}
+                          className="hover:text-red-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-500 mt-1">No days off planned.</p>
+                )}
+                <p className="text-xs text-neutral-500 mt-1">Patients can't book you on these days. Bookings already made stay; cancel them from your appointments if needed.</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1">Slot Duration (minutes)</label>
-                <select 
+                <select
                   value={doctorSettings.consultationDuration}
-                  onChange={(e) => setDoctorSettings({...doctorSettings, consultationDuration: Number(e.target.value)})}
+                  onChange={(e) => setDoctorSettings({ ...doctorSettings, consultationDuration: Number(e.target.value) })}
                   className="w-full p-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
                 >
                   <option value={15}>15 minutes</option>
