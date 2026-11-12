@@ -37,21 +37,7 @@ const Emergency: React.FC = () => {
   const mapsLink = pos ? `https://www.google.com/maps?q=${pos.lat},${pos.lng}` : null;
   const name = profile?.name || user?.name || 'I';
   const smsBody = `EMERGENCY: ${name === 'I' ? 'I need' : `${name} needs`} help.${mapsLink ? ` Location: ${mapsLink}` : ''}${profile?.bloodGroup ? ` Blood group ${profile.bloodGroup}.` : ''}`;
-  const cleanPhone = (phone: string) => phone.replace(/[^\d+]/g, '');
-  const smsHref = (phone: string) => `sms:${cleanPhone(phone)}?body=${encodeURIComponent(smsBody)}`;
-
-  // One text to every family contact at once (patient just presses Send).
-  // iPhone and Android use different formats for several recipients.
-  const familyPhones = (profile?.emergencyContacts || []).map((c) => cleanPhone(c.phone || '')).filter((x) => x.length >= 6);
-  const isIos = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isPhone = isIos || /Android/i.test(navigator.userAgent);
-  const textAllHref = familyPhones.length
-    ? isIos
-      ? `sms://open?addresses=${familyPhones.join(',')}&body=${encodeURIComponent(smsBody)}`
-      : `sms:${familyPhones.join(',')}?body=${encodeURIComponent(smsBody)}`
-    : null;
-  // WhatsApp's share screen lets the patient pick several people or a family group
-  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(smsBody)}`;
+  const smsHref = (phone: string) => `sms:${phone.replace(/[^\d+]/g, '')}?body=${encodeURIComponent(smsBody)}`;
 
   // Best hospital to call: nearest with an emergency department and a phone, then nearest with a phone
   const withPhone = (hospitals || []).filter((h) => h.phone);
@@ -82,23 +68,15 @@ const Emergency: React.FC = () => {
         const found = await hospitalsNear(here.lat, here.lng, 8, controller.signal).catch(() => []);
         setHospitals(found);
 
-        if (token) {
+        if (token && profile?.emergencyContacts?.some((c) => c.email)) {
           const target = found.find((h) => h.emergency && h.phone) || found[0];
           emergencyService
             .sendAlert(token, { lat: here.lat, lng: here.lng, hospital: target ? { name: target.name, phone: target.phone, distanceKm: target.distanceKm } : null })
             .then((r) => {
               const sent = r.contacts.filter((c) => c.emailed).map((c) => c.name);
-              setAlertStatus(sent.length ? { ok: true, text: `Nearby hospitals alerted. Emailed your location to ${sent.join(', ')}.` } : { ok: false, text: 'Nearby hospitals alerted, but the family emails could not be sent. Text your family below.' });
+              setAlertStatus(sent.length ? { ok: true, text: `Emailed your location to ${sent.join(', ')}.` } : { ok: false, text: 'Alert emails could not be sent. Call or text your family below.' });
             })
-            .catch((err) => {
-              const msg: string = err?.response?.data?.error || '';
-              // No family email saved: the alert still reached nearby hospitals
-              if (err?.response?.status === 400 && /email address/i.test(msg)) {
-                setAlertStatus({ ok: true, text: 'Nearby hospitals alerted. Text your family with the button below.' });
-              } else {
-                setAlertStatus({ ok: false, text: msg || 'The alert could not be sent. Call 112 and text your family below.' });
-              }
-            });
+            .catch((err) => setAlertStatus({ ok: false, text: err?.response?.data?.error || 'Alert emails could not be sent. Call or text your family below.' }));
         }
       },
       () => {
@@ -207,25 +185,6 @@ const Emergency: React.FC = () => {
                 {!isAuthenticated && <p className="text-sm text-neutral-600 dark:text-neutral-400"><Link to="/login" className="text-primary-600 hover:underline">Log in</Link> to call and alert your saved family contacts.</p>}
                 {isAuthenticated && !profile?.emergencyContacts?.length && (
                   <p className="text-sm text-neutral-600 dark:text-neutral-400">No family contacts saved. <Link to="/profile" className="text-primary-600 hover:underline">Add them in your profile</Link>.</p>
-                )}
-                {familyPhones.length > 0 && (
-                  <div className="mb-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {textAllHref && (
-                        <a href={textAllHref} className={`${callButton} bg-red-600 hover:bg-red-700 text-white py-3`}>
-                          <MessageSquare className="w-5 h-5" /> Text all family ({familyPhones.length})
-                        </a>
-                      )}
-                      <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className={`${callButton} bg-green-600 hover:bg-green-700 text-white py-3`}>
-                        <MessageSquare className="w-5 h-5" /> Send on WhatsApp
-                      </a>
-                    </div>
-                    <p className="mt-2 text-xs text-neutral-500">
-                      {isPhone
-                        ? 'Opens your messages with the text ready. Just press Send.'
-                        : 'Texting works from your phone. On a computer, use WhatsApp or call.'}
-                    </p>
-                  </div>
                 )}
                 <div className="space-y-3">
                   {profile?.emergencyContacts?.map((c) => (
