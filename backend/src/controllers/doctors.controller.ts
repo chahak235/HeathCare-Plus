@@ -157,9 +157,10 @@ export class DoctorsController {
       console.log('📊 Fetching all doctors from database...');
 
       const { specialty, city, hospitalId } = req.query;
+      // Only approved doctor profiles are public and bookable
       let doctors = hospitalId
-        ? await this.doctorRepository.find({ where: { hospitalId: parseInt(hospitalId as string) } })
-        : await this.doctorRepository.find();
+        ? await this.doctorRepository.find({ where: { hospitalId: parseInt(hospitalId as string), isVerified: true } })
+        : await this.doctorRepository.find({ where: { isVerified: true } });
 
       if (specialty && typeof specialty === 'string') {
         doctors = doctors.filter((d) => d.specialty === specialty);

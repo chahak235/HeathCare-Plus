@@ -76,9 +76,10 @@ export class AuthService {
           if (doctor.userId) {
             throw new Error('This doctor profile has already been claimed by another account');
           }
+          // Link only. The profile's email and phone (where booking emails go)
+          // switch to this account when an admin approves it, so an unapproved
+          // sign-up cannot receive a real doctor's patient emails.
           doctor.userId = user.id;
-          doctor.email = user.email;
-          doctor.phone = user.phone;
           await this.doctorRepository.save(doctor);
         } else {
           const doctor = this.doctorRepository.create({
@@ -137,7 +138,7 @@ export class AuthService {
           phone: user.phone,
           // explicit role type narrowing:
           role: (user.role as 'patient' | 'doctor' | 'admin' | 'hospital'),
-          isVerified: user.isVerified,
+          isVerified: user.isVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
         },
@@ -188,7 +189,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: (user.role as 'patient' | 'doctor' | 'admin' | 'hospital'),
-        isVerified: user.isVerified,
+        isVerified: user.isVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
@@ -228,7 +229,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: (user.role as 'patient' | 'doctor' | 'admin' | 'hospital'),
-        isVerified: user.isVerified,
+        isVerified: user.isVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };

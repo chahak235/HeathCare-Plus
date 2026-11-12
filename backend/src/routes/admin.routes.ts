@@ -119,6 +119,11 @@ router.patch('/users/:id/verify', adminOnly as any, async (req: AuthRequest, res
   user.isVerified = req.body?.verified !== false;
   await repo.save(user);
   forgetAccountStatus(user.id);
+  // On approval, the doctor's profile takes this account's contact details,
+  // so booking emails now reach them (not before approval)
+  if (user.role === 'doctor' && user.isVerified) {
+    await AppDataSource.getRepository(Doctor).update({ userId: user.id } as any, { email: user.email, phone: user.phone, isVerified: true } as any);
+  }
   res.json({ success: true, data: { id: user.id, role: user.role, isVerified: user.isVerified } });
 });
 
