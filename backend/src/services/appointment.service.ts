@@ -72,6 +72,8 @@ export class AppointmentService {
       workingDays: doctor.availableDays?.length ? doctor.availableDays : DEFAULT_DAYS,
       workingHours: doctor.availableHours || '9:00 AM - 5:00 PM',
       slotMinutes: doctor.consultationDuration || 30,
+      weeklyHours: doctor.weeklyHours || null,
+      daysOff: (doctor.daysOff || []).filter((d) => d >= first),
       days: result,
     };
   }

@@ -3,6 +3,7 @@ import { In, IsNull } from 'typeorm';
 import { AppDataSource } from '../config/database.config';
 import { Doctor } from '../entities/Doctor.entity';
 import { Hospital } from '../entities/Hospital.entity';
+import { parseTimeRanges, WEEKDAYS } from '../utils/schedule';
 
 export class DoctorsController {
   private doctorRepository = AppDataSource.getRepository(Doctor);
@@ -12,7 +13,7 @@ export class DoctorsController {
   async updateAvailability(req: Request, res: Response) {
     try {
       const id = parseInt(req.params.id);
-      const { isAcceptingPatients, availableDays, availableHours, consultationDuration } = req.body;
+      const { isAcceptingPatients, availableDays, availableHours, consultationDuration, weeklyHours, daysOff } = req.body;
       if (isNaN(id)) {
         return res.status(400).json({ success: false, error: 'Valid doctor id required' });
       }
@@ -31,7 +32,35 @@ export class DoctorsController {
         doctor.availableHours = availableHours;
       }
       if (typeof consultationDuration === 'number') {
-        doctor.consultationDuration = consultationDuration;
+        if (consultationDuration < 5 || consultationDuration > 240) {
+          return res.status(400).json({ success: false, error: 'Consultation length must be 5 to 240 minutes' });
+        }
+        doctor.consultationDuration = Math.round(consultationDuration);
+      }
+      if (weeklyHours !== undefined) {
+        if (weeklyHours === null) {
+          doctor.weeklyHours = null;
+        } else if (typeof weeklyHours !== 'object' || Array.isArray(weeklyHours)) {
+          return res.status(400).json({ success: false, error: 'weeklyHours must map weekdays to hours' });
+        } else {
+          const clean: Record<string, string> = {};
+          for (const [day, hours] of Object.entries(weeklyHours)) {
+            if (!WEEKDAYS.includes(day)) return res.status(400).json({ success: false, error: `Unknown weekday: ${day}` });
+            const text = String(hours ?? '').trim().slice(0, 100);
+            if (!text) continue; // blank = use the usual hours
+            if (!parseTimeRanges(text).length) {
+              return res.status(400).json({ success: false, error: `Could not read the hours for ${day}. Use e.g. 9:00-13:00, 14:00-18:00` });
+            }
+            clean[day] = text;
+          }
+          doctor.weeklyHours = Object.keys(clean).length ? clean : null;
+        }
+      }
+      if (daysOff !== undefined) {
+        if (!Array.isArray(daysOff) || daysOff.length > 200 || !daysOff.every((d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))) {
+          return res.status(400).json({ success: false, error: 'daysOff must be a list of dates like 2026-12-25' });
+        }
+        doctor.daysOff = [...new Set(daysOff as string[])].sort();
       }
 
       await this.doctorRepository.save(doctor);
@@ -39,7 +68,9 @@ export class DoctorsController {
         isAcceptingPatients: doctor.isAcceptingPatients,
         availableDays: doctor.availableDays,
         availableHours: doctor.availableHours,
-        consultationDuration: doctor.consultationDuration
+        consultationDuration: doctor.consultationDuration,
+        weeklyHours: doctor.weeklyHours,
+        daysOff: doctor.daysOff,
       } });
     } catch (error: any) {
       console.error('Update doctor availability error:', error);

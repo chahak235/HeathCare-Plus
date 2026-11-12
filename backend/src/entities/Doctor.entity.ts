@@ -72,6 +72,14 @@ export class Doctor {
   @Column({ name: 'available_hours', length: 100, nullable: true })
   availableHours: string;
 
+  /** Hours for particular weekdays, e.g. { "Saturday": "9:00-13:00" }; others use availableHours */
+  @Column({ name: 'weekly_hours', type: 'jsonb', nullable: true })
+  weeklyHours: Record<string, string> | null;
+
+  /** Dates ("YYYY-MM-DD", clinic time) the doctor is off: holidays, leave */
+  @Column({ name: 'days_off', type: 'text', array: true, nullable: true })
+  daysOff: string[] | null;
+
   @Column({ name: 'consultation_duration', default: 30 })
   consultationDuration: number;
 
