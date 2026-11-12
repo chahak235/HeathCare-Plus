@@ -320,20 +320,20 @@ export const Login: React.FC = () => {
 
               <GlassCard className="p-6">
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4">
-                  {t('auth.login.communityTrust')}
+                  Why HealthCare+
                 </h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-primary-600">10K+</div>
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400">{t('auth.login.activePatients')}</div>
+                    <div className="text-lg font-bold text-primary-600">Free</div>
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">to sign up</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-primary-600">500+</div>
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400">{t('navigation.doctors')}</div>
+                    <div className="text-lg font-bold text-primary-600">Video</div>
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">consults on Google Meet</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-primary-600">99.9%</div>
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400">{t('auth.login.uptime')}</div>
+                    <div className="text-lg font-bold text-primary-600">AES-256</div>
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">encrypted health records</div>
                   </div>
                 </div>
               </GlassCard>

@@ -340,7 +340,7 @@ export const SignUp: React.FC = () => {
               Create Your Account
             </h1>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
-              Join thousands of users managing their health with AI-powered tools
+              Book doctors, video consults and AI health tools in one place
             </p>
           </div>
 
@@ -748,20 +748,20 @@ export const SignUp: React.FC = () => {
               {/* Stats */}
               <GlassCard className="p-6">
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4">
-                  Join Our Community
+                  Why HealthCare+
                 </h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-primary-600">10K+</div>
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400">Active Users</div>
+                    <div className="text-lg font-bold text-primary-600">Free</div>
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">to sign up</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-primary-600">500+</div>
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400">Doctors</div>
+                    <div className="text-lg font-bold text-primary-600">Video</div>
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">consults on Google Meet</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-primary-600">98%</div>
-                    <div className="text-xs text-neutral-600 dark:text-neutral-400">Satisfaction</div>
+                    <div className="text-lg font-bold text-primary-600">AES-256</div>
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">encrypted health records</div>
                   </div>
                 </div>
               </GlassCard>
