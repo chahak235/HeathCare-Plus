@@ -49,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <textarea
               rows={rows || 2}
               className={baseClassName}
-              {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+              {...(props as unknown as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
             />
           ) : (
             <input

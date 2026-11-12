@@ -14,6 +14,9 @@ import {
 import { Button } from '../../ui/Button';
 import { AnalysisResult, Finding, Recommendation } from '../../../types/medical-images';
 
+/** Colour for a finding's severity (hex, so a faint background can be made from it) */
+const severityColor = (s?: Finding['severity']) => (s === 'high' ? '#dc2626' : s === 'medium' ? '#d97706' : '#0284c7');
+
 interface AnalysisResultsProps {
   result: AnalysisResult;
   onDownloadReport?: () => void;
@@ -197,17 +200,17 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
           <div className="space-y-4">
             {result.findings.map((finding, index) => (
               <div
-                key={finding.id}
+                key={index}
                 className="flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
                 <div className="flex-shrink-0">
                   <div 
                     className="w-12 h-12 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: finding.color + '20' }}
+                    style={{ backgroundColor: severityColor(finding.severity) + '20' }}
                   >
                     <div 
                       className="w-8 h-8 rounded-full"
-                      style={{ backgroundColor: finding.color }}
+                      style={{ backgroundColor: severityColor(finding.severity) }}
                     ></div>
                   </div>
                 </div>
@@ -225,7 +228,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
                           className="h-full rounded-full transition-all duration-1000"
                           style={{ 
                             width: `${finding.confidence * 100}%`,
-                            backgroundColor: finding.color
+                            backgroundColor: severityColor(finding.severity)
                           }}
                         ></div>
                       </div>
@@ -260,7 +263,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
           <div className="space-y-4">
             {result.recommendations.map((recommendation, index) => (
               <div
-                key={recommendation.id}
+                key={index}
                 className="flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700"
               >
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${typeColors[recommendation.type]}`}>
@@ -271,7 +274,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({
                     <h4 className="font-semibold text-gray-900 dark:text-white">
                       {recommendation.title}
                     </h4>
-                    {recommendation.priority <= 1 && (
+                    {recommendation.type === 'urgent' && (
                       <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-xs font-medium rounded-full">
                         PRIORITY
                       </span>

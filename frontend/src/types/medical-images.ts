@@ -10,6 +10,8 @@ export interface Recommendation {
   title: string;
   description: string;
   timeframe?: string;
+  /** Optional link, e.g. to book a doctor */
+  actionUrl?: string;
 }
 
 export interface AnalysisResult {
