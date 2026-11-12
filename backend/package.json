@@ -30,7 +30,8 @@
     "test-email": "ts-node src/scripts/send-test-email.ts",
     "encrypt-existing": "ts-node src/scripts/encrypt-existing.ts",
     "make-admin": "ts-node src/scripts/make-admin.ts",
-    "check-key": "ts-node src/scripts/check-encryption-key.ts"
+    "check-key": "ts-node src/scripts/check-encryption-key.ts",
+    "recount-doctor-stats": "ts-node --transpile-only src/scripts/recount-doctor-stats.ts"
   },
   "keywords": [
     "healthcare",
