@@ -1,73 +1,39 @@
 import React from 'react';
 import { Badge } from '../../components/ui/Badge';
 import type { DashboardTab } from './types';
-import type { Bed } from '../../types/bed.types';
-import type { TriagePatient } from '../../types/bed.types';
-import type { Ambulance } from '../../types/bed.types';
-import type { DoctorStatus } from '../../types/bed.types';
+import type { Bed, DoctorStatus } from '../../types/bed.types';
 
 interface DashboardTabsProps {
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
   beds: Bed[];
-  triagePatients: TriagePatient[];
-  ambulances: Ambulance[];
   doctors: DoctorStatus[];
+  openSos: number;
 }
 
-export const DashboardTabs: React.FC<DashboardTabsProps> = ({
-  activeTab,
-  onTabChange,
-  beds,
-  triagePatients,
-  ambulances,
-  doctors,
-}) => {
+export const DashboardTabs: React.FC<DashboardTabsProps> = ({ activeTab, onTabChange, beds, doctors, openSos }) => {
+  const occupied = beds.filter((b) => b.status === 'occupied').length;
+  const onDuty = doctors.filter((d) => d.isOnDuty).length;
   const tabs: { id: DashboardTab; label: string; badge?: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview' },
+    {
+      id: 'sos',
+      label: 'SOS Alerts',
+      badge: openSos > 0 ? <Badge variant="danger" size="sm" className="ml-2">{openSos}</Badge> : undefined,
+    },
     { id: 'appointments', label: 'Appointments' },
-    { id: 'trust', label: 'Reviews & Access Log' },
-    { 
-      id: 'beds', 
+    {
+      id: 'beds',
       label: 'Bed Management',
-      badge: beds.filter(b => b.status === 'occupied').length > 0 ? (
-        <Badge variant="danger" size="sm" className="ml-2">
-          {beds.filter(b => b.status === 'occupied').length}
-        </Badge>
-      ) : undefined
+      badge: occupied > 0 ? <Badge variant="warning" size="sm" className="ml-2">{occupied}</Badge> : undefined,
     },
-    { 
-      id: 'triage', 
-      label: 'Priority Queue',
-      badge: triagePatients.filter(p => p.priority <= 2).length > 0 ? (
-        <Badge variant="danger" size="sm" className="ml-2">
-          {triagePatients.filter(p => p.priority <= 2).length}
-        </Badge>
-      ) : undefined
-    },
-    { 
-      id: 'ambulances', 
-      label: 'Ambulance Tracking',
-      badge: ambulances.filter(a => a.status === 'enroute').length > 0 ? (
-        <Badge variant="warning" size="sm" className="ml-2">
-          {ambulances.filter(a => a.status === 'enroute').length}
-        </Badge>
-      ) : undefined
-    },
-    { 
-      id: 'doctors', 
+    {
+      id: 'doctors',
       label: 'Doctor Status',
-      badge: doctors.filter(d => d.isOnDuty).length > 0 ? (
-        <Badge variant="success" size="sm" className="ml-2">
-          {doctors.filter(d => d.isOnDuty).length} on duty
-        </Badge>
-      ) : undefined
+      badge: onDuty > 0 ? <Badge variant="success" size="sm" className="ml-2">{onDuty} on duty</Badge> : undefined,
     },
-    { 
-      id: 'analytics', 
-      label: 'Analytics',
-      badge: <Badge variant="info" size="sm" className="ml-2">LIVE</Badge>
-    },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'trust', label: 'Reviews & Access Log' },
   ];
 
   return (

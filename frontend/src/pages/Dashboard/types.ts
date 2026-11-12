@@ -1,16 +1,8 @@
-export type DashboardTab = 
-  | 'overview' 
-  | 'beds' 
-  | 'triage' 
-  | 'ambulances' 
-  | 'doctors' 
-  | 'analytics'
+export type DashboardTab =
+  | 'overview'
+  | 'sos'
   | 'appointments'
+  | 'beds'
+  | 'doctors'
+  | 'analytics'
   | 'trust';
-
-export interface EmergencyStats {
-  p1Patients: number;
-  incomingAmbulances: number;
-  availableEmergencyBeds: number;
-  criticalDoctors: number;
-}
