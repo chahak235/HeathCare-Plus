@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AppDataSource } from '../config/database.config';
 import { Patient } from '../entities/Patient.entity';
 import { User } from '../entities/User.entity';
+import { EmergencyAlert } from '../entities/EmergencyAlert.entity';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { EmailService } from '../services/email.service';
 
@@ -140,7 +141,18 @@ router.post('/alert', async (req: AuthRequest, res: Response) => {
     const name = profile.name || 'Your family member';
 
     const recipients = profile.emergencyContacts.filter((c: any) => c.email);
+    // Record every SOS so hospital staff see it in the dashboard, even when
+    // no family email can be sent
+    const alertRepo = AppDataSource.getRepository(EmergencyAlert);
+    const alert = await alertRepo.save(
+      alertRepo.create({
+        userId,
+        location: lat != null && lng != null ? `${lat.toFixed(5)},${lng.toFixed(5)}` : null,
+        nearestHospital: hospital?.name ? str(hospital.name, 200) : null,
+      })
+    );
     if (recipients.length === 0) {
+      lastAlert.set(userId, now);
       return res.status(400).json({ success: false, error: 'None of your emergency contacts has an email address. Add one in your health profile.' });
     }
     lastAlert.set(userId, now);
@@ -171,7 +183,8 @@ router.post('/alert', async (req: AuthRequest, res: Response) => {
           .catch(() => ({ name: c.name, emailed: false }))
       )
     );
-    res.json({ success: true, data: { contacts: results, location: mapsLink } });
+    await alertRepo.update(alert.id, { contactsEmailed: results.filter((r) => r.emailed).length });
+    res.json({ success: true, data: { contacts: results, location: mapsLink, alertId: alert.id } });
   } catch (err) {
     console.error('Emergency alert failed:', err);
     res.status(500).json({ success: false, error: 'Could not send the alert emails. Call your family directly.' });

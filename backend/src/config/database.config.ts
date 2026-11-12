@@ -18,11 +18,12 @@ try {
   const NewsletterSubscriber = require('../entities/NewsletterSubscriber.entity').NewsletterSubscriber;
   const AccessLog = require('../entities/AccessLog.entity').AccessLog;
   const Review = require('../entities/Review.entity').Review;
+  const EmergencyAlert = require('../entities/EmergencyAlert.entity').EmergencyAlert;
 
   entities = [
     Doctor, Patient, Hospital, DoctorHospital, Bed,
     Appointment, Admission, Notification, DoctorAvailability,
-    WaitTimeSample, User, NewsletterSubscriber, AccessLog, Review
+    WaitTimeSample, User, NewsletterSubscriber, AccessLog, Review, EmergencyAlert
   ].filter(entity => entity !== undefined);
 
   console.log(`✅ Loaded ${entities.length} entities successfully`);
