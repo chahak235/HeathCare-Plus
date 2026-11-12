@@ -12,6 +12,8 @@ import { Home } from "./pages/Home";
 import { Login } from './pages/Login';
 import MapPrediction from './pages/MapPrediction';
 import { SignUp } from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import './styles/globals.css';
 import { Profile } from './pages/Profile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -51,6 +53,8 @@ function App() {
               {/* Auth Routes */}
               <Route path="login" element={<Login />} />
               <Route path="signup" element={<SignUp />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
+              <Route path="reset-password" element={<ResetPassword />} />
               <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/chat-test" element={<ChatPublic />} />
 
