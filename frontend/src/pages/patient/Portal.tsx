@@ -42,7 +42,9 @@ interface Doctor {
   name: string;
   specialty: string;
   consultationFee: number;
-  rating: number;
+  /** Average of real reviews; null until the first one */
+  rating: number | null;
+  reviewCount?: number;
   experienceYears: number;
   languages: string[];
   hospitalName?: string;
@@ -518,8 +520,14 @@ export const PatientPortal: React.FC = () => {
                     <p className="text-primary-600 dark:text-primary-400 text-sm mb-3">{doctor.specialty}</p>
                     
                     <div className="flex items-center gap-2 mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium text-neutral-900 dark:text-white">{doctor.rating}</span>
+                      {doctor.rating != null && Number(doctor.reviewCount) > 0 ? (
+                        <>
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="font-medium text-neutral-900 dark:text-white">{Number(doctor.rating).toFixed(1)}</span>
+                        </>
+                      ) : (
+                        <span>New</span>
+                      )}
                       <span>•</span>
                       <span className="font-medium text-neutral-900 dark:text-white">₹{doctor.consultationFee}</span>
                     </div>
@@ -652,11 +660,17 @@ export const PatientPortal: React.FC = () => {
                             <h3 className="text-xl font-bold">{doctor.name}</h3>
                             <p className="text-medical-cyan">{doctor.specialty}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                              <span className="font-medium">{doctor.rating || 4.5}</span>
-                              <span className="text-xs text-gray-500">
-                                {doctor.experienceYears || 10}+ years
-                              </span>
+                              {doctor.rating != null && Number(doctor.reviewCount) > 0 ? (
+                                <>
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">{Number(doctor.rating).toFixed(1)}</span>
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-500">New: no reviews yet</span>
+                              )}
+                              {doctor.experienceYears ? (
+                                <span className="text-xs text-gray-500">{doctor.experienceYears} years</span>
+                              ) : null}
                             </div>
                           </div>
                         </div>

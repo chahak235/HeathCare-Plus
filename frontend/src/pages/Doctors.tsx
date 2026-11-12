@@ -38,7 +38,8 @@ interface Doctor {
   subSpecialty?: string;
   qualifications: string[];
   experience: number;
-  rating: number;
+  /** Average of real patient reviews; null until the first review */
+  rating: number | null;
   totalRatings: number;
   consultationFee: number;
   languages: string[];
@@ -137,7 +138,7 @@ export const Doctors: React.FC = () => {
             subSpecialty: doc.subSpecialty,
             qualifications: doc.qualification || [],
             experience: doc.experienceYears || doc.experience_years || 0,
-            rating: doc.rating || 4.5,
+            rating: doc.rating != null && Number(doc.reviewCount ?? doc.review_count) > 0 ? Number(doc.rating) : null,
             totalRatings: doc.reviewCount || doc.review_count || 0,
             consultationFee: doc.consultationFee || doc.consultation_fee || 0,
             languages: doc.languages || ['English', 'Hindi'],
@@ -221,7 +222,7 @@ export const Doctors: React.FC = () => {
 
     return matchesSearch && matchesSpecialty && matchesOnline && matchesEmergency;
   }).sort((a, b) => {
-    if (sortBy === 'rating') return b.rating - a.rating;
+    if (sortBy === 'rating') return (b.rating ?? 0) - (a.rating ?? 0);
     if (sortBy === 'experience') return b.experience - a.experience;
     return a.consultationFee - b.consultationFee;
   });
@@ -402,10 +403,16 @@ export const Doctors: React.FC = () => {
 
                         <div className="flex items-center justify-center mb-4">
                           <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="ml-1 font-bold">{doctor.rating}</span>
-                          <span className="ml-2 text-sm text-neutral-500">
-                            ({doctor.totalRatings} reviews)
-                          </span>
+                          {doctor.rating != null ? (
+                            <>
+                              <span className="ml-1 font-bold">{doctor.rating.toFixed(1)}</span>
+                              <span className="ml-2 text-sm text-neutral-500">
+                                ({doctor.totalRatings} {doctor.totalRatings === 1 ? 'review' : 'reviews'})
+                              </span>
+                            </>
+                          ) : (
+                            <span className="ml-1 text-sm text-neutral-500">New: no reviews yet</span>
+                          )}
                         </div>
 
                         {doctor.verified && (
@@ -613,17 +620,20 @@ export const Doctors: React.FC = () => {
             <div className="mt-12 grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card className="text-center p-6">
                 <div className="text-3xl font-bold text-primary-600 mb-2">
-                  {doctors.length}+
+                  {doctors.length}
                 </div>
                 <div className="text-sm text-neutral-600 dark:text-neutral-400">{t('doctors_page.verified_doctors')}</div>
               </Card>
               <Card className="text-center p-6">
                 <div className="text-3xl font-bold text-primary-600 mb-2">
-                  {doctors.length > 0
-                    ? Math.round(doctors.reduce((sum, doc) => sum + doc.rating, 0) / doctors.length * 20)
-                    : 98}%
+                  {(() => {
+                    // Only real reviews count; no number until patients have rated visits
+                    const rated = doctors.filter((d) => d.rating != null && d.totalRatings > 0);
+                    const n = rated.reduce((sum, d) => sum + d.totalRatings, 0);
+                    return n > 0 ? `${(rated.reduce((sum, d) => sum + (d.rating as number) * d.totalRatings, 0) / n).toFixed(1)} ★` : '—';
+                  })()}
                 </div>
-                <div className="text-sm text-neutral-600 dark:text-neutral-400">{t('doctors_page.patient_satisfaction')}</div>
+                <div className="text-sm text-neutral-600 dark:text-neutral-400">{t('doctors_page.average_rating', 'Average patient rating')}</div>
               </Card>
               <Card className="text-center p-6">
                 <div className="text-3xl font-bold text-primary-600 mb-2">
