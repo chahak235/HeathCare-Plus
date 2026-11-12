@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { AppDataSource } from '../config/database.config';
 import { User } from '../entities/User.entity';
 import { EmailService } from '../services/email.service';
+import { allowedOrigins } from '../config/cors';
 import { normaliseEmail, passwordProblem, recordLoginSuccess } from '../middleware/login-guard';
 
 /**
@@ -23,7 +24,8 @@ const emailService = new EmailService();
 const requests = new Map<string, number[]>();
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const siteUrl = () => (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/+$/, '');
+/** The website address for links in emails (FRONTEND_URL, else the first allowed site) */
+const siteUrl = () => (process.env.FRONTEND_URL || allowedOrigins()[0] || 'http://localhost:3000').replace(/\/+$/, '');
 
 /** True if this key made fewer than `max` requests in the last hour (and records this one). */
 function allow(key: string, max: number) {
