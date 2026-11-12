@@ -6,6 +6,7 @@ import { emergencyService, HealthProfile } from '../services/emergency-service';
 import realtimeService from '../services/realtime.service';
 import { reviewsService } from '../services/reviews-service';
 import RateVisit from '../components/features/reviews/RateVisit';
+import JoinCallButton, { canJoin } from '../components/features/appointment/JoinCallButton';
 import { Container } from '../components/layout/Container';
 import { GlassCard } from '../components/layout/GlassCard';
 import { Button } from '../components/ui/Button';
@@ -235,7 +236,9 @@ export const Profile: React.FC = () => {
                                     </div>
                                 )}
                                 {sortedAppointments.slice(0, 5).map((a) => {
-                                    const upcoming = new Date(a.scheduledTime).getTime() > now && a.status !== 'cancelled';
+                                    // Upcoming until the consult has ended (not just started), so Join stays during the call
+                                    const endsAt = new Date(a.scheduledTime).getTime() + (a.duration || 30) * 60_000;
+                                    const upcoming = endsAt > now && a.status !== 'cancelled';
                                     return (
                                         <div key={a.id} className="flex items-center p-4 rounded-lg bg-neutral-50 dark:bg-neutral-800">
                                             <Calendar className={`w-5 h-5 mr-3 ${upcoming ? 'text-primary-600' : 'text-neutral-400'}`} />
@@ -244,10 +247,13 @@ export const Profile: React.FC = () => {
                                                     {a.appointmentType === 'online' ? 'Video consult' : 'Clinic visit'} with {a.doctorName || 'doctor'}
                                                 </p>
                                                 <p className="text-sm text-neutral-600 dark:text-neutral-400">{fmtWhen(a.scheduledTime)} IST</p>
-                                                {upcoming && a.meetingLink && (
-                                                    <a href={a.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">
-                                                        Join Google Meet
-                                                    </a>
+                                                {canJoin(a) && (
+                                                    <div className="mt-2">
+                                                        <JoinCallButton
+                                                            appointment={a}
+                                                            onLink={(link) => setAppointments((list) => (list || []).map((x) => (x.id === a.id ? { ...x, meetingLink: link } : x)))}
+                                                        />
+                                                    </div>
                                                 )}
                                                 {!upcoming && a.status !== 'cancelled' && !reviewed.includes(a.id) && (
                                                     <RateVisit appointmentId={a.id} doctorName={a.doctorName} onDone={() => setReviewed((r) => [...r, a.id])} />

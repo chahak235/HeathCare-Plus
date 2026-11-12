@@ -6,6 +6,7 @@ import { GlassCard } from '../../components/layout/GlassCard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import JoinCallButton from '../../components/features/appointment/JoinCallButton';
 import { 
   Calendar, Clock, Video, Phone, MapPin, FileText, Download, Bell,
   User, Settings, LogOut, Star, Navigation, Filter, X, AlertTriangle,
@@ -26,6 +27,7 @@ interface Appointment {
   appointmentType: string;
   status: string;
   meetingLink?: string;
+  duration?: number;
   hospitalName: string;
 }
 
@@ -313,14 +315,15 @@ export const PatientPortal: React.FC = () => {
     setPortalTab('appointments');
   };
 
+  // An appointment stays "upcoming" until it has ended, so Join is there during the call
+  const endsAt = (apt: Appointment) => new Date(apt.scheduledTime).getTime() + (apt.duration || 30) * 60_000;
   const filteredAppointments = appointments.filter(apt => {
-    const aptDate = new Date(apt.scheduledTime);
-    const now = new Date();
-    if (activeTab === 'upcoming') return aptDate > now;
-    return aptDate < now;
+    const now = Date.now();
+    if (activeTab === 'upcoming') return endsAt(apt) > now;
+    return endsAt(apt) <= now;
   });
 
-  const upcomingCount = appointments.filter(apt => new Date(apt.scheduledTime) > new Date()).length;
+  const upcomingCount = appointments.filter(apt => endsAt(apt) > Date.now()).length;
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-blue-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-blue-950/30">
@@ -829,13 +832,18 @@ export const PatientPortal: React.FC = () => {
                         )}
                       </div>
                       <div className="flex gap-2">
-                        {isConfirmed && apt.meetingLink && apt.appointmentType === 'online' && (
-                          <Button size="sm" leftIcon={<Video className="w-4 h-4" />} className="rounded-xl shadow-md bg-primary-600 hover:bg-primary-700 text-white">
-                            Join Video Call
-                          </Button>
-                        )}
-                        {isConfirmed && apt.appointmentType === 'in_person' && (
-                          <Button size="sm" variant="secondary" leftIcon={<Navigation className="w-4 h-4" />} className="rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md">
+                        <JoinCallButton
+                          appointment={apt}
+                          onLink={(link) => setAppointments((list) => list.map((x) => (x.id === apt.id ? { ...x, meetingLink: link } : x)))}
+                        />
+                        {isConfirmed && ['in-person', 'in_person', 'offline'].includes(apt.appointmentType) && endsAt(apt) > Date.now() && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            leftIcon={<Navigation className="w-4 h-4" />}
+                            className="rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md"
+                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(apt.hospitalName || 'hospital')}`, '_blank', 'noopener,noreferrer')}
+                          >
                             Get Directions
                           </Button>
                         )}
