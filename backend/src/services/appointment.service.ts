@@ -118,6 +118,7 @@ export class AppointmentService {
       where: { id: data.doctorId }
     });
     if (!doctor) throw new Error('Doctor not found');
+    if (doctor.isVerified === false) throw new Error('This doctor is not taking bookings yet');
 
     // Use provided hospitalId, doctor's hospitalId, or first available hospital
     let hospitalId = data.hospitalId || doctor.hospitalId;
