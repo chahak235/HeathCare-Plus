@@ -3,6 +3,8 @@
  * - Nominatim turns a place name (city, state, country) into an area
  * - Overpass lists every hospital mapped inside that area
  * Both are free and need no API key. Please keep requests modest.
+ * Hospital lists go through our API first, which caches them for everyone;
+ * if it is unreachable the browser asks Overpass directly.
  */
 
 export interface Place {
@@ -47,6 +49,27 @@ const HEDGE_AFTER_MS = 8000;
 const REQUEST_TIMEOUT_MS = 100000;
 const cache = new Map<string, any[]>();
 const MAX_RESULTS = 3000;
+/** Our API keeps a shared copy of each search, so repeat searches are instant */
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+/** Ask our server (shared cache); null means "not available, search directly". */
+async function fromServer(path: string, params: Record<string, string | number>, signal?: AbortSignal): Promise<any[] | null> {
+  const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
+  const key = `api:${path}?${qs}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  try {
+    const res = await fetch(`${API_URL}/hospital-search/${path}?${qs}`, { signal });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json?.success || !Array.isArray(json.elements)) return null;
+    cache.set(key, json.elements);
+    return json.elements;
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    return null;
+  }
+}
 
 export async function searchPlaces(query: string): Promise<Place[]> {
   const params = new URLSearchParams({ q: query, format: 'jsonv2', limit: '6', addressdetails: '0' });
@@ -174,6 +197,14 @@ const HOSPITAL_FILTER = (scope: string) => `
 
 /** Every hospital inside a searched place (uses its boundary when it has one). */
 export async function hospitalsInPlace(place: Place, signal?: AbortSignal): Promise<FoundHospital[]> {
+  const [bs, bn, bw, be] = place.bbox;
+  const viaServer = await fromServer(
+    'place',
+    place.osmType === 'relation' ? { osmType: 'relation', osmId: place.osmId } : { s: bs, n: bn, w: bw, e: be },
+    signal
+  );
+  if (viaServer) return dedupe(viaServer.map(toHospital));
+
   let query: string;
   if (place.osmType === 'relation') {
     const areaId = 3600000000 + place.osmId;
@@ -187,6 +218,13 @@ export async function hospitalsInPlace(place: Place, signal?: AbortSignal): Prom
 
 /** Hospitals within a radius of a point, sorted nearest first. */
 export async function hospitalsNear(lat: number, lng: number, radiusKm = 15, signal?: AbortSignal): Promise<FoundHospital[]> {
+  const viaServer = await fromServer('near', { lat: lat.toFixed(4), lng: lng.toFixed(4), radiusKm }, signal);
+  if (viaServer) {
+    // The server rounds the position slightly, so trim to the exact radius here
+    return withDistance(dedupe(viaServer.map(toHospital)), lat, lng)
+      .filter((h) => (h.distanceKm ?? 0) <= radiusKm)
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+  }
   const query = `[out:json][timeout:60];(${HOSPITAL_FILTER(`(around:${Math.round(radiusKm * 1000)},${lat},${lng})`)});out center tags ${MAX_RESULTS};`;
   const list = dedupe((await runOverpass(query, signal)).map(toHospital));
   return withDistance(list, lat, lng).sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));

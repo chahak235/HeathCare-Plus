@@ -21,6 +21,7 @@ import aiRoutes from './routes/ai.routes';
 import appointmentRoutes from './routes/appointment.routes';
 import emergencyRoutes from './routes/emergency.routes';
 import skinRoutes from './routes/skin.routes';
+import hospitalSearchRoutes from './routes/hospital-search.routes';
 import { accessLog } from './middleware/access-log';
 import reviewRoutes from './routes/review.routes';
 import adminRoutes from './routes/admin.routes';
@@ -269,6 +270,7 @@ console.log('46. Appointment routes mounted');
 
 app.use(`${apiPrefix}/emergency`, accessLog('health_profile') as any, emergencyRoutes);
 app.use(`${apiPrefix}/skin`, skinRoutes);
+app.use(`${apiPrefix}/hospital-search`, hospitalSearchRoutes);
 app.use(`${apiPrefix}/reviews`, reviewRoutes);
 app.use(`${apiPrefix}/admin/sos-alerts`, accessLog('sos_alerts') as any);
 app.use(`${apiPrefix}/admin`, hospitalStaff as any, adminRoutes);
