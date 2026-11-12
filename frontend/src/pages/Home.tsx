@@ -113,34 +113,35 @@ export const Home: React.FC = () => {
   }, []);
 
 
+  // Facts about the service (no invented user counts or trends)
   const stats = [
     {
-      label: t('home.stats.activeDoctors'),
-      value: '500+',
-      change: '+12%',
-      icon: <Users className="w-6 h-6 text-primary-600" />,
-      description: t('home.stats.verifiedPros')
-    },
-    {
-      label: t('home.stats.successRate'),
-      value: '98.2%',
-      change: '+0.8%',
+      label: 'X-ray AI model',
+      value: '88.5%',
+      change: '',
       icon: <Award className="w-6 h-6 text-primary-600" />,
-      description: t('home.stats.patientSatisfaction')
+      description: 'accuracy on a held-out test set',
     },
     {
-      label: t('home.stats.responseTime'),
-      value: '2.4s',
-      change: '-15%',
+      label: 'AI health assistant',
+      value: '24/7',
+      change: '',
       icon: <Clock className="w-6 h-6 text-primary-600" />,
-      description: t('home.stats.aiSpeed')
+      description: 'answers any time (not a diagnosis)',
     },
     {
-      label: t('home.stats.emergencyCases'),
-      value: '1.2K',
-      change: '-8%',
+      label: 'Emergency',
+      value: '112',
+      change: '',
       icon: <Activity className="w-6 h-6 text-primary-600" />,
-      description: t('home.stats.handledMonth')
+      description: 'one tap, plus SOS to family and nearby hospitals',
+    },
+    {
+      label: 'Health records',
+      value: 'AES-256',
+      change: '',
+      icon: <Users className="w-6 h-6 text-primary-600" />,
+      description: 'encrypted in our database',
     },
   ];
 
@@ -686,16 +687,16 @@ export const Home: React.FC = () => {
                   <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">{t('home.hero.stats.aiSupport')}</div>
                 </div>
                 <div className="flex flex-col text-left p-5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl shadow-sm hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
-                  <div className="text-3xl font-extrabold text-primary-600 dark:text-primary-400 tracking-tight">500+</div>
-                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">{t('home.hero.stats.doctors')}</div>
+                  <div className="text-3xl font-extrabold text-primary-600 dark:text-primary-400 tracking-tight">112</div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">One-tap emergency</div>
                 </div>
                 <div className="flex flex-col text-left p-5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl shadow-sm hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
-                  <div className="text-3xl font-extrabold text-primary-600 dark:text-primary-400 tracking-tight">98.2%</div>
-                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">{t('home.hero.stats.successRate')}</div>
+                  <div className="text-3xl font-extrabold text-primary-600 dark:text-primary-400 tracking-tight">Meet</div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">Video consults</div>
                 </div>
                 <div className="flex flex-col text-left p-5 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-2xl shadow-sm hover:bg-white/60 dark:hover:bg-slate-800/60 transition-colors">
-                  <div className="text-3xl font-extrabold text-primary-600 dark:text-primary-400 tracking-tight">2.4s</div>
-                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">{t('home.hero.stats.responseTime')}</div>
+                  <div className="text-3xl font-extrabold text-primary-600 dark:text-primary-400 tracking-tight">Free</div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-wider">To sign up</div>
                 </div>
               </div>
             </div>
@@ -814,9 +815,6 @@ export const Home: React.FC = () => {
                       {stat.value}
                     </p>
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-medium ${parseInt(stat.change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {stat.change}
-                      </span>
                       <span className="text-sm text-neutral-500 clinical-subtle">
                         {stat.description}
                       </span>
@@ -827,15 +825,6 @@ export const Home: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Progress bar */}
-                <div className="mt-6">
-                  <div className="h-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${parseInt(stat.change) >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                      style={{ width: '85%' }}
-                    ></div>
-                  </div>
-                </div>
               </GlassCard>
               </div>
             ))}

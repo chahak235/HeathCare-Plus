@@ -120,16 +120,16 @@ export const About: React.FC = () => {
             </p>
             <div className="flex items-center space-x-4">
               <div className="flex-1 p-3 bg-white dark:bg-neutral-800 rounded-lg text-center">
-                <div className="text-2xl font-bold text-primary-600">500+</div>
-                <div className="text-sm text-neutral-600 dark:text-neutral-400">{t('aboutPage.hospitals')}</div>
+                <div className="text-2xl font-bold text-primary-600">Worldwide</div>
+                <div className="text-sm text-neutral-600 dark:text-neutral-400">hospital search</div>
               </div>
               <div className="flex-1 p-3 bg-white dark:bg-neutral-800 rounded-lg text-center">
-                <div className="text-2xl font-bold text-primary-600">50+</div>
-                <div className="text-sm text-neutral-600 dark:text-neutral-400">{t('aboutPage.countries')}</div>
+                <div className="text-2xl font-bold text-primary-600">24/7</div>
+                <div className="text-sm text-neutral-600 dark:text-neutral-400">AI assistant</div>
               </div>
               <div className="flex-1 p-3 bg-white dark:bg-neutral-800 rounded-lg text-center">
-                <div className="text-2xl font-bold text-primary-600">2M+</div>
-                <div className="text-sm text-neutral-600 dark:text-neutral-400">{t('aboutPage.patients')}</div>
+                <div className="text-2xl font-bold text-primary-600">AES-256</div>
+                <div className="text-sm text-neutral-600 dark:text-neutral-400">encrypted records</div>
               </div>
             </div>
           </GlassCard>
