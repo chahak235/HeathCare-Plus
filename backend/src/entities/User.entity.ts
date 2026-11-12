@@ -27,8 +27,12 @@ export class User {
   @Column({ name: 'verification_token', nullable: true })
   verificationToken: string;
 
-  @Column({ name: 'reset_token', nullable: true })
-  resetToken: string;
+  /** SHA-256 of the emailed reset token (never the token itself) */
+  @Column({ name: 'reset_token', type: 'varchar', nullable: true })
+  resetToken: string | null;
+
+  @Column({ name: 'reset_token_expires', type: 'timestamp', nullable: true })
+  resetTokenExpires: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
