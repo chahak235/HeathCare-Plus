@@ -57,7 +57,6 @@ export const DoctorDashboard: React.FC = () => {
 
   const [isAcceptingPatients, setIsAcceptingPatients] = useState(true);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
-  const [calendarConnected, setCalendarConnected] = useState(false);
   const [calendarBanner, setCalendarBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Settings modal states
@@ -90,7 +89,6 @@ export const DoctorDashboard: React.FC = () => {
           setIsAcceptingPatients(d.isAcceptingPatients);
         }
         if (d) {
-          setCalendarConnected(!!d.googleCalendarConnected);
           setDoctorSettings({
             availableDays: d.availableDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
             availableHours: d.availableHours || '09:00-17:00',
@@ -129,17 +127,6 @@ export const DoctorDashboard: React.FC = () => {
     // Clean the query param out of the URL without a full reload.
     window.history.replaceState({}, '', window.location.pathname);
   }, [refetchDoctorProfile]);
-
-  const connectGoogleCalendar = async () => {
-    if (!doctorId) return;
-    try {
-      // Ask (as the logged-in doctor) for a signed, short-lived Google consent link
-      const res = await axios.get(`${API_URL}/auth/google/connect-url/${doctorId}`);
-      if (res.data?.url) window.location.href = res.data.url;
-    } catch (err: any) {
-      alert(err?.response?.data?.error || 'Could not start Google Calendar connection. Please log in again.');
-    }
-  };
 
   const toggleAvailability = async () => {
     if (!doctorId) return;
@@ -278,17 +265,18 @@ export const DoctorDashboard: React.FC = () => {
             <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white mb-1">
               Doctor Dashboard
             </h1>
-            <p className="text-neutral-500 dark:text-neutral-400">Welcome back, Dr. {user?.name}</p>
+            <p className="text-neutral-500 dark:text-neutral-400">Welcome back, {/^dr\.?\s/i.test(user?.name || '') ? user?.name : `Dr. ${user?.name || ''}`}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant={calendarConnected ? 'success' : 'default'}>
-              {calendarConnected ? 'Google Calendar Connected' : 'Calendar Not Connected'}
-            </Badge>
-            {!calendarConnected && (
-              <Button variant="secondary" size="sm" disabled={!doctorId} onClick={connectGoogleCalendar} leftIcon={<Calendar className="w-4 h-4" />}>
-                Connect Google Calendar
-              </Button>
-            )}
+            {/* Every booking is created from the HealthCare+ Google account and
+                invites the doctor's email, so it lands in their own calendar
+                with the Meet link; no separate connection is needed. */}
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200"
+              title="Each booking is sent as a Google Calendar invite (with the Meet link) to your email, so it shows in your own calendar automatically."
+            >
+              <Calendar className="w-3.5 h-3.5" /> Bookings arrive as calendar invites
+            </span>
             <Badge variant={isAcceptingPatients ? 'success' : 'default'}>
               {isAcceptingPatients ? 'Accepting Patients' : 'Unavailable'}
             </Badge>
