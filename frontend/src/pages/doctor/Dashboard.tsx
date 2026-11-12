@@ -4,6 +4,7 @@ import { Container } from '../../components/layout/Container';
 import { GlassCard } from '../../components/layout/GlassCard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import JoinCallButton from '../../components/features/appointment/JoinCallButton';
 import { Calendar, Clock, Video, Phone, Mail, MapPin, Users, AlertTriangle, Check, X, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useRealtime } from '../../contexts/RealtimeContext';
@@ -20,6 +21,7 @@ interface Appointment {
   appointmentType: string;
   status: string;
   meetingLink?: string;
+  duration?: number;
   symptoms?: string[];
 }
 
@@ -180,8 +182,11 @@ export const DoctorDashboard: React.FC = () => {
       if (response.data.success) {
         setAppointments(response.data.data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch appointments:', error);
+      // e.g. "Your doctor account is waiting for approval by HealthCare+."
+      const msg = error?.response?.data?.error;
+      if (error?.response?.status === 403 && msg) setProfileError(msg);
     } finally {
       setLoading(false);
     }
@@ -205,10 +210,6 @@ export const DoctorDashboard: React.FC = () => {
       realtimeService.off('notification:new', onNotification);
     };
   }, [fetchAppointments]);
-
-  const handleStartMeeting = (meetingLink: string) => {
-    window.open(meetingLink, '_blank');
-  };
 
   const respondToAppointment = async (id: number, status: 'confirmed' | 'cancelled') => {
     setRespondingId(id);
@@ -507,11 +508,10 @@ export const DoctorDashboard: React.FC = () => {
                             </Button>
                           </>
                         )}
-                        {apt.appointmentType === 'online' && apt.meetingLink && (
-                          <Button size="sm" leftIcon={<Video className="w-4 h-4" />} className="rounded-xl shadow-md bg-emerald-600 hover:bg-emerald-700 text-white border-0" onClick={() => handleStartMeeting(apt.meetingLink!)}>
-                            Join Meeting
-                          </Button>
-                        )}
+                        <JoinCallButton
+                          appointment={apt}
+                          onLink={(link) => setAppointments((list) => list.map((x) => (x.id === apt.id ? { ...x, meetingLink: link } : x)))}
+                        />
                         <Button
                           variant="secondary"
                           size="sm"
