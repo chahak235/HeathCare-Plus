@@ -2,7 +2,7 @@
 
 This file tracks the product build so work can resume at any time. To continue, type **continue** in Claude Code.
 
-Everything stays **local only**. Nothing is pushed to GitHub.
+Code is pushed to https://github.com/chahak235/HeathCare-Plus (`main`) in small commits of 2-3 files. Pushing to `main` redeploys the website (Vercel) and the API (Render).
 
 ## How to run locally
 
@@ -46,6 +46,10 @@ cd frontend && npm run dev          # http://localhost:3000
 | 14 | LIVE | Done. Website https://heathcareplus.vercel.app (Vercel, `VITE_API_URL` = Render URL + `/api`, type Config). API https://healthcare-plus-api-qpj5.onrender.com (Render, Docker, Singapore, free). Render free plan blocks SMTP, so email goes through the Gmail API (`EMAIL_TRANSPORT=gmail-api`; Gmail API enabled; refresh token has calendar.events + gmail.send). Live check: online booking confirmed in 3.3 s with Meet link, calendar invite and emails to patient and doctor |
 | 15 | Launch checklist (code part) | Done. Privacy Policy `/privacy` and Terms `/terms` (plain language, match what the code does, DPDP Act 2023), linked from footer and sign-up. Removed false claims: HIPAA compliant, end-to-end encryption, fake awards (Forbes, TechCrunch), fake contact (US 555 phone, Boston address). GitHub Actions pings the API every 10 min (`.github/workflows/keep-api-awake.yml`). Page title, description, sharing tags, robots.txt, sitemap.xml, site icon. Have a lawyer review the policies before real patients |
 | 16 | Skin model, security, reviews, admin dashboard | Done (needs your steps below). Skin: ConvNeXt-XL (23 conditions, 80.7% top-1 / 94.1% top-3) is too big for the browser or Render, so it runs as its own service `skin-model-service/` (ready for a free Hugging Face Space); API `POST /api/skin/analyze`; analyzer shows Skin when `SKIN_MODEL_URL` is reachable. Tested locally: ~6 s per photo. Security: health fields encrypted at rest with AES-256-GCM (`utils/field-crypto.ts`, key `DATA_ENCRYPTION_KEY`, same value everywhere; `npm run encrypt-existing` once after Render has the key); login lockout after 5 wrong passwords (15 min); password rule (8+ chars, letter and number); `trust proxy`; audit log of every health-record view/change (`access_logs` table, shown in dashboard); closed a hole where anyone could sign up as admin/doctor/hospital and read patients' data: admin sign-up blocked, doctor/hospital accounts need admin approval (`npm run make-admin -- email`). Reviews: real reviews only, after a past appointment, one per visit (`reviews` table); Home shows them when there are any; Profile has Rate this visit; doctors' rating comes from real reviews. Admin/hospital dashboard: Appointments tab (real bookings, mark done/cancel), Reviews & Access Log tab, account approvals (admin). 16 + 29 checks pass |
+| 17 | Dashboard with real data only | Done. SOS presses are now saved (`emergency_alerts` table, location encrypted) and shown in a new **SOS Alerts** tab: hospitals see alerts within 50 km (or naming them as nearest), admins see all; call the patient, open the location, Acknowledge / Resolved; refreshes every 30 s, red banner when one is open. **Analytics** tab is real: bookings per day, in-clinic vs video, status, specialty, most-booked doctors, new patients, SOS count and average response time, CSV export. Removed the sample triage queue, ambulance tracking and patient-journey screens. 10 API checks pass |
+| 18 | Doctor schedules | Done. Doctors can set different hours per weekday, lunch breaks (`09:00-13:00, 14:00-18:00`) and days off (holidays/leave) in Settings; booking calendar respects them. `npm test` works again (ts-jest) with 10 schedule tests; 11 API checks pass |
+| 19 | Faster hospital map | Done. `/api/hospital-search` caches OpenStreetMap results in the database for everyone (7 days per city, 1 day "near me"). Pune: 45 s first time, 1.5 s after. If the API fails, the browser searches directly as before |
+| 20 | Honest doctor numbers + cleanup | Doctors without reviews show "New" (was an assumed 4.5). `npm run recount-doctor-stats` sets ratings/patient counts from real reviews and completed visits (**not run yet: needs your OK, it rewrites live data**). Removed 79 unused frontend files and 6 packages (frontend type errors 43 → 0), and the old JavaScript server copy in `backend/` (incl. scripts that created demo logins). `npm run start:ts` now starts the real server |
 | 7 | Run everything locally and test | Done without a database. Frontend production build passes, backend type-checks, 25 automated tests pass (15 scheduling, 10 AI routes). Checked in the browser: X-ray model, voice page, hospital finder, emergency page, Video Consultation opens Online booking. Not tested yet: anything needing the database or keys (doctor list, booking, emails, Meet, saving the health profile, voice report) |
 
 ## Docs
@@ -56,7 +60,9 @@ cd frontend && npm run dev          # http://localhost:3000
 
 - **Publish the Google app before 18 November 2026.** The Google token was created on 11 Nov in Testing mode and stops working after 7 days (Meet links and emails fail). Google Cloud → Google Auth Platform → Audience → Publish app, then run `npm run google-auth -- --print` in `backend` and paste the new `GOOGLE_PLATFORM_REFRESH_TOKEN` into Render.
 
-- **Render settings to add:** `DATA_ENCRYPTION_KEY` (copy from `backend/.env`, same value), then run `npm run encrypt-existing` once. `SKIN_MODEL_URL` after the Hugging Face Space is running.
+- **Skin model: on hold.** Ready for Google Cloud Run (see `skin-model-service/README.md`); then set `SKIN_MODEL_URL` and `SKIN_SERVICE_KEY` on Render.
+- **Sample doctors (decide before real patients):** the 15 seeded doctors are invented but listed at real hospitals (AIIMS, NIMHANS, CMC Vellore, Apollo…) with made-up phone numbers, and can be booked. Hide or replace them with real doctors.
+- **Run once:** `npm run recount-doctor-stats` in `backend` to replace the invented ratings/review counts (e.g. "4.6, 180 reviews") with real ones.
 - **Make your admin account:** sign up on the site, then `npm run make-admin -- your@email` in `backend`. Test admin: `TEST_ADMIN_EMAIL` / `TEST_ADMIN_PASSWORD` in `backend/.env`.
 - **Not done on purpose:** "HIPAA compliant", "end-to-end encryption", invented awards and generated testimonials stay off the site; they would be false claims. Real safeguards and real reviews were built instead.
 
@@ -67,20 +73,18 @@ cd frontend && npm run dev          # http://localhost:3000
 3. **Email**: add `SMTP_USER` / `SMTP_PASS` (Gmail App Password) so confirmations reach real inboxes.
 4. **Google Meet and Calendar**: done. Before real launch: publish the consent screen (Audience → Publish app) or Google will expire the refresh token every 7 days while in Testing mode.
 5. **Product website polish**: business branding, landing page copy, pricing or contact page (needs your business details). Demo content already removed.
-6. **Doctor mode**: doctor sign-up already lets doctors set days and hours in the dashboard settings. Could add per-day hours and holidays.
-7. **Hospital/admin mode**: review the hospital dashboard (beds, doctors) for real data.
+6. **Doctor mode**: done (per-day hours, breaks, days off).
+7. **Hospital/admin mode**: done (real SOS alerts, bookings, analytics, reviews, access log, account approvals). Beds come from the hospital's own bed records.
 8. **Security before launch**: done for all routes that change or expose data. On Render set `NODE_ENV=production` and a long random `JWT_SECRET`; set `DB_SYNCHRONIZE=true` only for the deploy that adds new columns, then remove it.
-9. **Skin model**: when your friend sends it, convert to ONNX and enable it (see task 1 note).
+9. **Skin model**: received; on hold until Google Cloud Run is set up (`skin-model-service/README.md`).
 10. **Deploy**: done (see task 14). Pushing to `main` redeploys both automatically. Before real patients: publish the Google consent screen (or the Google token expires every 7 days), consider Render's paid plan to avoid the 30-60 s wake-up.
-
-To add the skin model later: convert it to ONNX the same way, put it in `frontend/public/models/`, and set `skinModelReady` in `frontend/src/pages/ImageAnalysis.tsx`.
 
 ## Things you need to provide later
 
-- Skin condition model from your friend
-- GitHub repo URL when you want to push
+- Decision on the 15 sample doctors (hide, or replace with real doctors who sign up)
+- Google Cloud billing + bucket for the skin model (when you want it live)
 
 ## Known issues found in the original code
 
-- None open from the original list (all fixed). Remaining old demo areas: the 3D dashboard and the in-memory demo patients in `PatientAPIService`.
+- None open from the original list. The 3D dashboard is removed. Still in the backend: in-memory demo patients in `PatientAPIService` (`/api/patients-api`, staff only, not used by the website) and two old tests skipped in `npm test`.
 
