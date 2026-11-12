@@ -84,6 +84,7 @@ cd frontend && npm run dev          # http://localhost:3000
 ## Things you need to provide later
 
 - When real doctors join: hide or replace the 15 sample doctors
+- SOS text to family (later): free one-tap "Text all family" + WhatsApp, and/or automatic SMS via Fast2SMS/MSG91/Twilio (needs DLT registration in India)
 - Google Cloud billing + bucket for the skin model (when you want it live)
 
 ## Known issues found in the original code
